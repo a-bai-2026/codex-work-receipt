@@ -5,18 +5,26 @@ import { buildCompensation, getWorkProfileCopy } from "./presentation.mjs";
 
 export function compactReceipt(record) {
   const profileId = record.presentation.work_profile;
+  const scope = record.source?.scope || (record.presentation.compensation?.label === "本日工资" ? "today" : "latest");
   const mobileProfile = profileId
     ? getWorkProfileCopy(profileId, "zh-CN")
     : { title: record.presentation.work_title, review: record.presentation.review };
   const mobileCompensation = profileId
-    ? buildCompensation(record.source.scope, record.presentation.compensation?.amount, "zh-CN")
+    ? buildCompensation(scope, record.presentation.compensation?.amount, "zh-CN")
     : record.presentation.compensation;
 
   return {
     v: record.schema_version,
     i: record.id,
     g: record.generated_at,
-    d: [record.period.start_at, record.period.end_at, record.period.timezone],
+    o: scope,
+    d: [
+      record.period.start_at,
+      record.period.end_at,
+      record.period.timezone,
+      record.period.range_start_date || null,
+      record.period.range_end_date || null,
+    ],
     s: [
       record.stats.session_count,
       record.stats.completed_turns,

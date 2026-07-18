@@ -24,10 +24,10 @@ Codex Work Receipt summarizes turns, tool calls, Tokens, duration, and models, t
 
 ## Quickstart
 
-Requires Node.js 20+ and local Codex session records. No clone required:
+Requires Node.js 20+ and local Codex session records. No clone required; choose today, the last 7 days, this week, or a specific session:
 
 ```bash
-npx codex-work-receipt@latest --latest --lang en
+npx codex-work-receipt@latest --lang en
 ```
 
 Summarize all Codex activity from today:
@@ -36,7 +36,7 @@ Summarize all Codex activity from today:
 npx codex-work-receipt@latest --today --lang en
 ```
 
-HTML and structured data are written to `./codex-work-receipt-output/` by default. See the [CLI guide](docs/cli.en.md) for themes, timezones, custom output paths, and all options.
+HTML and structured data are written to `./codex-work-receipt-output/` by default. Non-interactive options such as `--latest` and `--today` remain available; see the [CLI guide](docs/cli.en.md).
 
 ## Ask Codex directly
 

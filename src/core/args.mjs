@@ -1,15 +1,22 @@
+import { normalizeScope } from "./range.mjs";
+
 export function printHelp(locale = "zh-CN") {
   console.log(locale === "en" ? `
 Codex AI Work Receipt
 
 Usage:
+  npx codex-work-receipt@latest
   npx codex-work-receipt@latest --latest --lang en
   npx codex-work-receipt@latest --today --lang en
+  npx codex-work-receipt@latest --range last-7-days --lang en
+  npx codex-work-receipt@latest --range this-week --lang en
   npx codex-work-receipt@latest --install-skill --lang en
 
 Options:
+  --range <name>              Range: latest, today, last-7-days, this-week
   --latest                    Summarize the latest active Codex session (default)
   --today                     Summarize all Codex activity from today
+  --session <id>              Summarize one specific Codex session
   --timezone <name>           Use an IANA timezone, for example Asia/Shanghai
   --lang <name>               Receipt language: zh-CN, en
   --theme <name>              Default theme: classic, diner, payroll
@@ -22,13 +29,18 @@ Options:
 Codex AI 打工小票
 
 用法：
+  npx codex-work-receipt@latest
   npx codex-work-receipt@latest --latest
   npx codex-work-receipt@latest --today
+  npx codex-work-receipt@latest --range last-7-days
+  npx codex-work-receipt@latest --range this-week
   npx codex-work-receipt@latest --install-skill
 
 选项：
+  --range <name>              统计范围：latest、today、last-7-days、this-week
   --latest                    统计最近活跃的 Codex 会话（默认）
   --today                     统计本地时区今天发生的全部 Codex 活动
+  --session <id>              统计指定的 Codex 会话
   --timezone <name>           指定 IANA 时区，例如 Asia/Shanghai
   --lang <name>               小票语言：zh-CN、en
   --theme <name>              默认主题：classic、diner、payroll
@@ -43,6 +55,8 @@ Codex AI 打工小票
 export function parseArgs(argv) {
   const result = {
     mode: "latest",
+    modeExplicit: false,
+    sessionId: null,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Shanghai",
     locale: "zh-CN",
     theme: "classic",
@@ -58,19 +72,36 @@ export function parseArgs(argv) {
     ["--theme", "theme"],
     ["--output", "output"],
     ["--data-dir", "dataDir"],
+    ["--session", "sessionId"],
   ]);
 
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
-    if (argument === "--latest") result.mode = "latest";
-    else if (argument === "--today") result.mode = "today";
-    else if (argument === "--install-skill") result.installSkill = true;
+    if (argument === "--latest") {
+      result.mode = "latest";
+      result.modeExplicit = true;
+    } else if (argument === "--today") {
+      result.mode = "today";
+      result.modeExplicit = true;
+    } else if (argument === "--range") {
+      const value = argv[++index];
+      if (!value) throw new Error("--range 需要提供值");
+      const scope = normalizeScope(value);
+      if (!scope || scope === "session") throw new Error(`不支持的统计范围：${value}`);
+      result.mode = scope;
+      result.modeExplicit = true;
+    } else if (argument === "--install-skill") result.installSkill = true;
     else if (argument === "--no-open") result.open = false;
     else if (argument === "--help" || argument === "-h") result.help = true;
     else if (optionsWithValues.has(argument)) {
       const value = argv[++index];
       if (!value) throw new Error(`${argument} 需要提供值`);
-      result[optionsWithValues.get(argument)] = value;
+      const key = optionsWithValues.get(argument);
+      result[key] = value;
+      if (key === "sessionId") {
+        result.mode = "session";
+        result.modeExplicit = true;
+      }
     } else throw new Error(`不认识的参数：${argument}`);
   }
 

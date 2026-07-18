@@ -9,7 +9,17 @@
 
 无需克隆仓库或全局安装。
 
-## 统计范围
+## 交互选择统计范围
+
+直接运行：
+
+```bash
+npx codex-work-receipt@latest
+```
+
+命令行会让你选择：今天全部活动、最近 7 个自然日、本周，或最近的某个具体会话。选择具体会话时会展示起止时间、轮次、工具调用和模型，帮助辨认。
+
+## 非交互统计范围
 
 统计最近一次活跃会话，并自动打开小票：
 
@@ -21,6 +31,18 @@ npx codex-work-receipt@latest --latest
 
 ```bash
 npx codex-work-receipt@latest --today
+```
+
+最近 7 个自然日（含今天）：
+
+```bash
+npx codex-work-receipt@latest --range last-7-days
+```
+
+本周周一至今：
+
+```bash
+npx codex-work-receipt@latest --range this-week
 ```
 
 ## 语言与主题
@@ -73,8 +95,10 @@ npx codex-work-receipt@latest --latest --no-open
 
 | 参数 | 说明 |
 | --- | --- |
+| `--range <name>` | `latest`、`today`、`last-7-days` 或 `this-week` |
 | `--latest` | 统计最近活跃的 Codex 会话，默认模式 |
 | `--today` | 汇总指定时区今天发生的 Codex 活动 |
+| `--session <id>` | 统计指定的 Codex 会话 |
 | `--timezone <name>` | 指定 IANA 时区，例如 `Asia/Shanghai` |
 | `--lang <name>` | `zh-CN`（默认）或 `en` |
 | `--theme <name>` | `classic`、`diner` 或 `payroll` |
@@ -105,5 +129,5 @@ npx codex-work-receipt@latest --help
 
 - 当前只支持 Codex；Cursor、WorkBuddy 等数据源仍在规划中
 - 暂不统计修改文件数和代码行数，避免不同工具调用方式产生误导
-- `--today` 默认扫描最近 72 小时有变动的会话文件，再按事件日期筛选
+- 时间范围按每条事件的本地日期筛选，并分别计算每个会话的 Token 区间增量
 - 网页端不直接导出图片，移动端渲染和保存由配套小程序完成

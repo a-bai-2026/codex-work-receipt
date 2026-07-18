@@ -20,6 +20,12 @@ function formatCount(value, units, locale) {
   return `${formatNumber(amount, locale)} ${unit}`;
 }
 
+function formatDateKey(value, locale) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ""));
+  if (!match) return String(value || "");
+  return locale === "en" ? `${match[2]}/${match[3]}/${match[1]}` : `${match[1]}/${match[2]}/${match[3]}`;
+}
+
 export function renderHtml({ record, dataQrDataUrl, miniProgramCodeDataUrl = null }) {
   const locale = record.locale || DEFAULT_LOCALE;
   const copy = getReceiptCopy(locale);
@@ -27,7 +33,13 @@ export function renderHtml({ record, dataQrDataUrl, miniProgramCodeDataUrl = nul
   const endAt = new Date(record.period.end_at);
   const timezone = record.period.timezone;
   const displayDate = formatDate(endAt, timezone, locale);
-  const businessHours = `${formatTime(startAt, timezone, locale)}—${formatTime(endAt, timezone, locale)}`;
+  const rangeStartDate = record.period.range_start_date || formatDateKey(record.period.start_at.slice(0, 10), "zh-CN").replaceAll("/", "-");
+  const rangeEndDate = record.period.range_end_date || formatDateKey(record.period.end_at.slice(0, 10), "zh-CN").replaceAll("/", "-");
+  const spansMultipleDates = rangeStartDate !== rangeEndDate;
+  const businessPeriod = spansMultipleDates
+    ? `${formatDateKey(rangeStartDate, locale)}—${formatDateKey(rangeEndDate, locale)}`
+    : `${formatTime(startAt, timezone, locale)}—${formatTime(endAt, timezone, locale)}`;
+  const businessPeriodLabel = spansMultipleDates ? copy.meta.period : copy.meta.hours;
   const scopeLabel = copy.scope[record.source.scope] || copy.scope.latest;
   const modelLabel = record.stats.models.length ? record.stats.models.join(" / ") : copy.modelMissing;
   const receiptNumber = `${record.id.slice(4, 12).toUpperCase()}-${String(record.stats.completed_turns).padStart(3, "0")}`;
@@ -329,7 +341,7 @@ export function renderHtml({ record, dataQrDataUrl, miniProgramCodeDataUrl = nul
 
       <section class="meta">
         <div>${escapeHtml(copy.meta.date)}: ${escapeHtml(displayDate)}</div>
-        <div>${escapeHtml(copy.meta.hours)}: ${escapeHtml(businessHours)}</div>
+        <div>${escapeHtml(businessPeriodLabel)}: ${escapeHtml(businessPeriod)}</div>
         <div>${escapeHtml(copy.meta.number)}: ${escapeHtml(receiptNumber)}</div>
         <div>${escapeHtml(copy.meta.timezone)}: ${escapeHtml(timezone)}</div>
       </section>

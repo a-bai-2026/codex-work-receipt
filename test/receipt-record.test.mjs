@@ -9,6 +9,10 @@ import { buildReceiptRecord, persistReceiptRecord } from "../src/core/receipt-re
 const metrics = {
   mode: "latest",
   timezone: "Asia/Shanghai",
+  targetDate: "2026-07-17",
+  rangeStartDate: "2026-07-17",
+  rangeEndDate: "2026-07-17",
+  activeDayCount: 1,
   sessionIds: ["session-a"],
   sessionCount: 1,
   startAt: new Date("2026-07-16T15:00:00.000Z"),
@@ -40,6 +44,7 @@ test("结构记录只包含统计和隐私声明", () => {
   assert.equal(record.presentation.compensation.unit, "AI 工分");
   assert.equal(record.presentation.work_profile, "toolchain-commander");
   assert.equal(record.presentation.work_title, "工具链指挥官");
+  assert.equal(record.period.range_start_date, "2026-07-17");
   assert.equal(record.privacy.contains_prompts, false);
   assert.equal(record.privacy.contains_code, false);
   assert.doesNotMatch(serialized, /"prompt_text":|"response_text":|"file_path":|"filename":/);
@@ -58,6 +63,25 @@ test("英文结构记录使用同一语义角色和英文展示文案", () => {
   assert.match(record.presentation.review, /calling tools/);
   assert.equal(record.presentation.compensation.label, "SHIFT PAY");
   assert.equal(record.presentation.compensation.unit, "AI work pts");
+});
+
+test("同一自然周重复生成会更新同一张历史小票", () => {
+  const weekly = buildReceiptRecord({
+    ...metrics,
+    mode: "this-week",
+    rangeStartDate: "2026-07-13",
+    rangeEndDate: "2026-07-16",
+  });
+  const updatedWeekly = buildReceiptRecord({
+    ...metrics,
+    mode: "this-week",
+    rangeStartDate: "2026-07-13",
+    rangeEndDate: "2026-07-18",
+    endAt: new Date("2026-07-18T16:00:00.000Z"),
+  });
+
+  assert.equal(updatedWeekly.id, weekly.id);
+  assert.notEqual(updatedWeekly.source.snapshot_hash, weekly.source.snapshot_hash);
 });
 
 test("无扩展名输出不会被结构 JSON 覆盖", () => {

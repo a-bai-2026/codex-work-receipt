@@ -9,6 +9,10 @@ import { renderHtml } from "../src/renderers/html.mjs";
 const metrics = {
   mode: "latest",
   timezone: "Asia/Shanghai",
+  targetDate: "2026-07-18",
+  rangeStartDate: "2026-07-18",
+  rangeEndDate: "2026-07-18",
+  activeDayCount: 1,
   sessionIds: ["english-session"],
   sessionCount: 1,
   startAt: new Date("2026-07-18T10:00:00.000Z"),

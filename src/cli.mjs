@@ -8,11 +8,14 @@ import QRCode from "qrcode";
 
 import { parseArgs, printHelp } from "./core/args.mjs";
 import { collectMetrics } from "./core/metrics.mjs";
+import { getReceiptCopy } from "./core/presentation.mjs";
 import { encodeReceiptPayload } from "./core/qr-payload.mjs";
+import { outputSlugForScope, resolveRange } from "./core/range.mjs";
 import { buildReceiptRecord, persistReceiptRecord } from "./core/receipt-record.mjs";
+import { promptForRange } from "./core/selector.mjs";
 import { installCodexSkill } from "./core/skill-installer.mjs";
 import { formatNumber } from "./lib/time.mjs";
-import { loadCodexSessions } from "./parsers/codex.mjs";
+import { listRecentCodexSessions, loadCodexSessions } from "./parsers/codex.mjs";
 import { renderHtml } from "./renderers/html.mjs";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -61,8 +64,19 @@ async function main() {
     return;
   }
 
-  const sessions = loadCodexSessions(options.mode);
-  const metrics = collectMetrics(sessions, options.mode, options.timezone);
+  if (!options.modeExplicit && process.stdin.isTTY && process.stdout.isTTY) {
+    const selected = await promptForRange({
+      locale: options.locale,
+      timezone: options.timezone,
+      loadRecentSessions: () => listRecentCodexSessions(10),
+    });
+    options.mode = selected.mode;
+    options.sessionId = selected.sessionId;
+  }
+
+  const range = resolveRange(options.mode, options.timezone, new Date(), options.sessionId);
+  const sessions = loadCodexSessions(range);
+  const metrics = collectMetrics(sessions, range);
   const record = buildReceiptRecord(metrics, options.theme, options.locale);
   const qrPayload = encodeReceiptPayload(record);
   const dataQrDataUrl = await QRCode.toDataURL(qrPayload, {
@@ -72,7 +86,10 @@ async function main() {
     color: { dark: "#171713", light: "#ffffff" },
   });
 
-  const requestedOutput = options.output || path.join(DEFAULT_OUTPUT_DIR, `codex-receipt-${options.mode}.html`);
+  const requestedOutput = options.output || path.join(
+    DEFAULT_OUTPUT_DIR,
+    `codex-receipt-${outputSlugForScope(options.mode)}.html`,
+  );
   const outputFile = path.resolve(/\.html?$/i.test(requestedOutput) ? requestedOutput : `${requestedOutput}.html`);
   fs.mkdirSync(path.dirname(outputFile), { recursive: true });
 
@@ -89,6 +106,7 @@ async function main() {
     console.log(`Generated HTML: ${outputFile}`);
     console.log(`Structured data: ${persisted.companionPath}`);
     console.log(`Local history: ${persisted.receiptPath}`);
+    console.log(`Range: ${getReceiptCopy(options.locale).scope[record.source.scope]} · ${record.stats.session_count} session(s)`);
     console.log(`Stats: ${record.stats.completed_turns} turns · ${formatNumber(record.stats.tokens.total_tokens, options.locale)} Tokens · ${record.stats.tool_calls} tool calls`);
     console.log(`Data QR: ${qrPayload.length} characters · schema v${record.schema_version}`);
     if (!miniProgramCodeDataUrl) console.log("Mini-program code: not configured; using the explicit placeholder");
@@ -96,6 +114,7 @@ async function main() {
     console.log(`已生成网页：${outputFile}`);
     console.log(`结构数据：${persisted.companionPath}`);
     console.log(`本地历史：${persisted.receiptPath}`);
+    console.log(`统计范围：${getReceiptCopy(options.locale).scope[record.source.scope]} · ${record.stats.session_count} 个会话`);
     console.log(`统计：${record.stats.completed_turns} 轮 · ${formatNumber(record.stats.tokens.total_tokens, options.locale)} Token · ${record.stats.tool_calls} 次工具调用`);
     console.log(`数据二维码：${qrPayload.length} 字符 · schema v${record.schema_version}`);
     if (!miniProgramCodeDataUrl) console.log("小程序码：尚未配置，页面使用明确占位符");

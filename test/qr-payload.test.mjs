@@ -7,6 +7,7 @@ const record = {
   schema_version: 1,
   id: "cwr_example",
   generated_at: "2026-07-17T00:00:00.000Z",
+  source: { scope: "latest" },
   period: {
     start_at: "2026-07-16T15:00:00.000Z",
     end_at: "2026-07-16T16:00:00.000Z",
@@ -56,4 +57,24 @@ test("二维码结构数据可以无损解码", () => {
 test("损坏的二维码数据会被拒绝", () => {
   const payload = encodeReceiptPayload(record);
   assert.throws(() => decodeReceiptPayload(`${payload}x`), /校验失败|invalid|incorrect/i);
+});
+
+test("二维码显式携带新的统计范围和自然日边界", () => {
+  const payload = encodeReceiptPayload({
+    ...record,
+    source: { scope: "last-7-days" },
+    period: {
+      ...record.period,
+      range_start_date: "2026-07-11",
+      range_end_date: "2026-07-17",
+    },
+    presentation: {
+      ...record.presentation,
+      compensation: { ...record.presentation.compensation, label: "近七日工资" },
+    },
+  });
+  const decoded = decodeReceiptPayload(payload);
+
+  assert.equal(decoded.o, "last-7-days");
+  assert.deepEqual(decoded.d.slice(3), ["2026-07-11", "2026-07-17"]);
 });

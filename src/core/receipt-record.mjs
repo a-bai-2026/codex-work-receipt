@@ -10,7 +10,7 @@ import {
 } from "./presentation.mjs";
 
 const SCHEMA_VERSION = 1;
-const COLLECTOR_VERSION = "0.3.0";
+const COLLECTOR_VERSION = "0.4.0";
 
 function fingerprintSessionIds(sessionIds) {
   return crypto.createHash("sha256").update([...sessionIds].sort().join("|")).digest("hex").slice(0, 16);
@@ -18,9 +18,11 @@ function fingerprintSessionIds(sessionIds) {
 
 export function buildReceiptRecord(metrics, defaultTheme = "classic", locale = DEFAULT_LOCALE) {
   const sessionFingerprint = fingerprintSessionIds(metrics.sessionIds);
-  const logicalKey = metrics.mode === "latest"
+  const logicalKey = metrics.mode === "latest" || metrics.mode === "session"
     ? `latest:${sessionFingerprint}`
-    : `today:${metrics.targetDate}:${metrics.timezone}`;
+    : metrics.mode === "this-week"
+      ? `this-week:${metrics.rangeStartDate}:${metrics.timezone}`
+      : `${metrics.mode}:${metrics.rangeStartDate}:${metrics.rangeEndDate}:${metrics.timezone}`;
   const id = `cwr_${crypto.createHash("sha256").update(logicalKey).digest("hex").slice(0, 16)}`;
   const snapshotHash = crypto.createHash("sha256").update(JSON.stringify({
     start: metrics.startAt.toISOString(),
@@ -29,6 +31,9 @@ export function buildReceiptRecord(metrics, defaultTheme = "classic", locale = D
     tools: metrics.toolCalls,
     turns: metrics.completedTurns,
     interruptions: metrics.interruptions,
+    scope: metrics.mode,
+    rangeStartDate: metrics.rangeStartDate,
+    rangeEndDate: metrics.rangeEndDate,
   })).digest("hex").slice(0, 16);
   const workProfileId = metrics.workProfileId || "temporary-hire";
   const workProfile = getWorkProfileCopy(workProfileId, locale);
@@ -50,6 +55,8 @@ export function buildReceiptRecord(metrics, defaultTheme = "classic", locale = D
       start_at: metrics.startAt.toISOString(),
       end_at: metrics.endAt.toISOString(),
       timezone: metrics.timezone,
+      range_start_date: metrics.rangeStartDate,
+      range_end_date: metrics.rangeEndDate,
     },
     stats: {
       session_count: metrics.sessionCount,

@@ -1,4 +1,5 @@
 import { dateKey, rowDate } from "../lib/time.mjs";
+import { calendarDayCount, isCalendarScope, isDateInRange } from "./range.mjs";
 import { selectWorkProfileId } from "./presentation.mjs";
 
 function zeroUsage() {
@@ -23,26 +24,26 @@ function addUsage(target, source) {
   for (const key of Object.keys(target)) target[key] += Number(source[key] || 0);
 }
 
-function sessionTokenUsage(rows, mode, targetDate, timezone) {
+function sessionTokenUsage(rows, range) {
   const events = rows
     .filter((row) => row.type === "event_msg" && row.payload?.type === "token_count")
     .filter((row) => row.payload?.info?.total_token_usage)
     .sort((left, right) => (rowDate(left)?.getTime() || 0) - (rowDate(right)?.getTime() || 0));
 
   if (!events.length) return zeroUsage();
-  if (mode === "latest") return { ...zeroUsage(), ...events.at(-1).payload.info.total_token_usage };
+  if (!isCalendarScope(range.scope)) {
+    return { ...zeroUsage(), ...events.at(-1).payload.info.total_token_usage };
+  }
 
-  const lastToday = events.filter((row) => {
-    const date = rowDate(row);
-    return date && dateKey(date, timezone) === targetDate;
-  }).at(-1);
-  if (!lastToday) return zeroUsage();
+  const lastInRange = events.filter((row) => isDateInRange(rowDate(row), range)).at(-1);
+  if (!lastInRange) return zeroUsage();
 
   const baseline = events.filter((row) => {
     const date = rowDate(row);
-    return date && dateKey(date, timezone) < targetDate;
+    return date && dateKey(date, range.timezone) < range.startDate;
   }).at(-1)?.payload.info.total_token_usage || zeroUsage();
-  return subtractUsage(lastToday.payload.info.total_token_usage, baseline);
+
+  return subtractUsage(lastInRange.payload.info.total_token_usage, baseline);
 }
 
 function calculateWorkPoints(metrics) {
@@ -60,8 +61,14 @@ function calculateWorkPoints(metrics) {
   return Math.max(0, Math.round(points));
 }
 
-export function collectMetrics(sessions, mode, timezone) {
-  const targetDate = dateKey(new Date(), timezone);
+function emptyRangeMessage(range) {
+  if (range.scope === "today") return `没有找到 ${range.targetDate} 的 Codex 活动`;
+  if (range.scope === "last-7-days") return `没有找到 ${range.startDate} 至 ${range.endDate} 的 Codex 活动`;
+  if (range.scope === "this-week") return `本周暂时没有找到 Codex 活动`;
+  return "没有找到可统计的 Codex 会话";
+}
+
+export function collectMetrics(sessions, range) {
   const scopedSessions = [];
   const sessionIds = [];
   const tokens = zeroUsage();
@@ -73,24 +80,25 @@ export function collectMetrics(sessions, mode, timezone) {
   let totalFirstTokenMs = 0;
   let firstTokenSamples = 0;
   const timestamps = [];
+  const activeDateKeys = new Set();
   const models = new Set();
 
   for (const session of sessions) {
-    const scopedRows = mode === "latest"
-      ? session.rows
-      : session.rows.filter((row) => {
-          const date = rowDate(row);
-          return date && dateKey(date, timezone) === targetDate;
-        });
+    const scopedRows = isCalendarScope(range.scope)
+      ? session.rows.filter((row) => isDateInRange(rowDate(row), range))
+      : session.rows;
 
     if (!scopedRows.length) continue;
     scopedSessions.push(session);
     sessionIds.push(session.sessionId);
-    addUsage(tokens, sessionTokenUsage(session.rows, mode, targetDate, timezone));
+    addUsage(tokens, sessionTokenUsage(session.rows, range));
 
     for (const row of scopedRows) {
       const date = rowDate(row);
-      if (date) timestamps.push(date);
+      if (date) {
+        timestamps.push(date);
+        activeDateKeys.add(dateKey(date, range.timezone));
+      }
 
       if (row.type === "turn_context" && row.payload?.model) models.add(row.payload.model);
       if (row.type === "event_msg") {
@@ -121,15 +129,19 @@ export function collectMetrics(sessions, mode, timezone) {
     if (fallbackModel) models.add(fallbackModel);
   }
 
-  if (!scopedSessions.length) {
-    throw new Error(mode === "today" ? `没有找到 ${targetDate} 的 Codex 活动` : "没有找到可统计的 Codex 会话");
-  }
+  if (!scopedSessions.length || !timestamps.length) throw new Error(emptyRangeMessage(range));
 
   timestamps.sort((left, right) => left - right);
+  const rangeStartDate = range.startDate || dateKey(timestamps[0], range.timezone);
+  const rangeEndDate = range.endDate || dateKey(timestamps.at(-1), range.timezone);
   const metrics = {
-    mode,
-    timezone,
-    targetDate,
+    mode: range.scope,
+    timezone: range.timezone,
+    targetDate: range.targetDate,
+    rangeStartDate,
+    rangeEndDate,
+    calendarDayCount: isCalendarScope(range.scope) ? calendarDayCount(range) : 1,
+    activeDayCount: Math.max(1, activeDateKeys.size),
     sessionIds,
     sessionCount: scopedSessions.length,
     startAt: timestamps[0],

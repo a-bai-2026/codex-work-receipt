@@ -24,10 +24,10 @@
 
 ## Quickstart
 
-需要 Node.js 20 或更高版本，并且本机已经使用过 Codex。无需克隆仓库：
+需要 Node.js 20 或更高版本，并且本机已经使用过 Codex。无需克隆仓库，运行后选择“今天 / 近 7 日 / 本周 / 指定会话”：
 
 ```bash
-npx codex-work-receipt@latest --latest
+npx codex-work-receipt@latest
 ```
 
 汇总今天的全部 Codex 活动：
@@ -36,7 +36,7 @@ npx codex-work-receipt@latest --latest
 npx codex-work-receipt@latest --today
 ```
 
-网页和结构数据默认保存在 `./codex-work-receipt-output/`。主题、英文小票、时区和输出路径等参数见 [CLI 使用文档](docs/cli.md)。
+网页和结构数据默认保存在 `./codex-work-receipt-output/`。也可以继续使用 `--latest`、`--today` 等非交互参数，详见 [CLI 使用文档](docs/cli.md)。
 
 ## 直接跟 Codex 说
 

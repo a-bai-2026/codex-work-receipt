@@ -9,7 +9,17 @@
 
 No clone or global installation is required.
 
-## Ranges
+## Interactive range selector
+
+Run:
+
+```bash
+npx codex-work-receipt@latest --lang en
+```
+
+Choose all activity today, the last 7 calendar days, this week, or a specific recent session. Session choices include their time range, turns, tool calls, and model for identification.
+
+## Non-interactive ranges
 
 Summarize the latest active session and open the receipt:
 
@@ -21,6 +31,18 @@ Summarize all Codex activity from today in your local timezone:
 
 ```bash
 npx codex-work-receipt@latest --today --lang en
+```
+
+Last 7 calendar days, including today:
+
+```bash
+npx codex-work-receipt@latest --range last-7-days --lang en
+```
+
+Monday through now:
+
+```bash
+npx codex-work-receipt@latest --range this-week --lang en
 ```
 
 ## Language and themes
@@ -73,8 +95,10 @@ npx codex-work-receipt@latest --latest --lang en --no-open
 
 | Option | Description |
 | --- | --- |
+| `--range <name>` | `latest`, `today`, `last-7-days`, or `this-week` |
 | `--latest` | Summarize the latest active Codex session; default mode |
 | `--today` | Summarize activity from today in the selected timezone |
+| `--session <id>` | Summarize one specific Codex session |
 | `--timezone <name>` | Set an IANA timezone such as `Asia/Shanghai` |
 | `--lang <name>` | `zh-CN` (default) or `en` |
 | `--theme <name>` | `classic`, `diner`, or `payroll` |
@@ -105,5 +129,5 @@ See the [data schema and QR protocol](data-schema.en.md).
 
 - Codex is the only supported data source; Cursor and WorkBuddy are planned
 - Changed-file and line counts are intentionally omitted until they can be measured consistently
-- `--today` scans session files modified in the last 72 hours, then filters by event date
+- Calendar ranges filter individual events by local date and calculate a Token delta for each session
 - Image export is handled by the companion mini program rather than the desktop page

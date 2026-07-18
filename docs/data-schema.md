@@ -10,13 +10,13 @@
 - `locale`：桌面小票语言，支持 `zh-CN` 和 `en`
 - `id`：根据统计快照生成的匿名 ID
 - `generated_at`：生成时间
-- `source`：数据来源和统计范围
-- `period`：开始、结束和时区
+- `source`：数据来源、`scope` 统计范围和采集器版本
+- `period`：实际活动起止时间、时区，以及 `range_start_date` / `range_end_date` 自然日边界
 - `stats`：轮次、消息、工具、Token、时长等统计
 - `presentation`：默认主题、语言无关的 `work_profile`、本地化工种、点评和 AI 工分
 - `privacy`：明确声明不包含的敏感内容
 
-同一个最近会话或同一天的 `id` 保持稳定；重复生成会更新该记录。`source.snapshot_hash` 用于识别统计内容是否发生变化。
+同一个会话、同一天或同一组自然日边界的 `id` 保持稳定；重复生成会更新该记录。`source.snapshot_hash` 用于识别统计内容是否发生变化。
 
 ## 二维码格式
 
@@ -27,6 +27,8 @@ cwr1.<checksum>.<deflateRaw(JSON) 的 Base64URL>
 ```
 
 小程序应检查前缀和校验值，再解压并解析数据。未来结构升级通过 `v` 字段兼容。
+
+精简字段 `o` 显式携带 `latest`、`session`、`today`、`last-7-days` 或 `this-week`；`d[3]` 和 `d[4]` 携带自然日边界。新增字段保持 `cwr1` 和结构版本 `1`，旧二维码仍可由新版小程序导入。
 
 `presentation.compensation` 是娱乐化 AI 工分，不代表真实 API 费用。为兼容当前中文小程序，二维码展示文案继续使用中文，并通过精简字段 `l` 和 `r` 携带桌面语言及工种语义 ID；英文 HTML 和本地 JSON 不受影响。
 

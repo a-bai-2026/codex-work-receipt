@@ -26,9 +26,13 @@ After installation, ask Codex:
 
 > Generate today's AI work receipt with the diner theme.
 
+> Generate an AI work receipt for the last seven days.
+
+> Show how much Codex worked this week.
+
 > Create a Chinese receipt for my latest session.
 
-Codex will choose `--latest` or `--today`, the language, and the theme, then run the CLI and open the generated page.
+Codex will choose a specific session, today, the last seven days, or this week, plus the language and theme, then run the CLI and open the generated page.
 
 You can also invoke the skill explicitly with `$ai-work-receipt`.
 

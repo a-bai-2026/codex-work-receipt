@@ -9,10 +9,10 @@ The desktop page shows both the fixed mini-program code and a data QR code for t
 3. Scan the adjacent data QR code.
 4. Validate the `cwr1` prefix, checksum, and schema version.
 5. Decompress and parse the privacy-safe metrics.
-6. Deduplicate by receipt ID and store the record in local history.
+6. Recognize a session, today, last-seven-days, or this-week range, then deduplicate by receipt ID and store it locally.
 7. Render the selected template with Canvas and save it to the phone.
 
-The QR code does not transfer an image. The desktop page and mini program independently render the same structured receipt data.
+The QR code does not transfer an image. The desktop page and mini program independently render the same structured receipt data. Older QR codes without an explicit range field remain supported through the legacy label fallback.
 
 The companion mini program is a separate product. This repository does not contain its source code, AppID, backend code, or server credentials.
 

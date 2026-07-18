@@ -88,12 +88,16 @@ const RECEIPT_COPY = {
     },
     scope: {
       latest: "最近一次会话",
+      session: "指定会话",
       today: "今日全部会话",
+      "last-7-days": "最近 7 个自然日",
+      "this-week": "本周全部会话",
     },
     modelMissing: "未记录",
     meta: {
       date: "日期",
       hours: "营业时段",
+      period: "统计周期",
       number: "小票编号",
       timezone: "时区",
     },
@@ -146,12 +150,16 @@ const RECEIPT_COPY = {
     },
     scope: {
       latest: "Latest session",
+      session: "Selected session",
       today: "All sessions today",
+      "last-7-days": "Last 7 calendar days",
+      "this-week": "All sessions this week",
     },
     modelMissing: "Not recorded",
     meta: {
       date: "Date",
       hours: "Work hours",
+      period: "Period",
       number: "Receipt No.",
       timezone: "Timezone",
     },
@@ -196,25 +204,32 @@ const RECEIPT_COPY = {
 const COMPENSATION_COPY = {
   "zh-CN": {
     latest: "本单工资",
+    session: "本单工资",
     today: "本日工资",
+    "last-7-days": "近七日工资",
+    "this-week": "本周工资",
     unit: "AI 工分",
     note: "按轮次、工具调用、Token 和改需求次数娱乐折算，不代表真实费用。",
   },
   en: {
     latest: "SHIFT PAY",
+    session: "SHIFT PAY",
     today: "TODAY'S PAY",
+    "last-7-days": "7-DAY PAY",
+    "this-week": "THIS WEEK'S PAY",
     unit: "AI work pts",
     note: "A playful score based on turns, tool calls, Tokens, and interruptions. Not a real charge.",
   },
 };
 
 export function selectWorkProfileId(metrics) {
-  if (metrics.interruptions >= 3) return "change-request-survivor";
-  if (metrics.toolCalls >= 40) return "toolchain-commander";
-  if (metrics.tokens.total_tokens >= 500_000) return "context-devouring-beast";
-  if (metrics.completedTurns >= 12) return "continuous-delivery-machine";
-  if (metrics.workDurationMs >= 60 * 60 * 1000) return "night-shift-companion";
-  if (metrics.completedTurns >= 5) return "steady-progress-partner";
+  const scale = Math.max(1, Number(metrics.activeDayCount || 1));
+  if (metrics.interruptions >= 3 * scale) return "change-request-survivor";
+  if (metrics.toolCalls >= 40 * scale) return "toolchain-commander";
+  if (metrics.tokens.total_tokens >= 500_000 * scale) return "context-devouring-beast";
+  if (metrics.completedTurns >= 12 * scale) return "continuous-delivery-machine";
+  if (metrics.workDurationMs >= 60 * 60 * 1000 * scale) return "night-shift-companion";
+  if (metrics.completedTurns >= 5 * scale) return "steady-progress-partner";
   return "temporary-hire";
 }
 
@@ -230,7 +245,7 @@ export function getReceiptCopy(locale = DEFAULT_LOCALE) {
 export function buildCompensation(scope, amount, locale = DEFAULT_LOCALE) {
   const copy = COMPENSATION_COPY[SUPPORTED_LOCALES.has(locale) ? locale : DEFAULT_LOCALE];
   return {
-    label: scope === "today" ? copy.today : copy.latest,
+    label: copy[scope] || copy.latest,
     amount: Number(amount || 0),
     unit: copy.unit,
     note: copy.note,

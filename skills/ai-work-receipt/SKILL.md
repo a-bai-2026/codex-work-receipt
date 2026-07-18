@@ -1,6 +1,6 @@
 ---
 name: ai-work-receipt
-description: Generate and open a privacy-first local AI work receipt from Codex session metadata. Use when the user asks Codex to create, regenerate, open, or locate an “AI 打工小票” or “AI work receipt” for the latest session or today, in Chinese or English, including requests for the classic, diner, or payroll theme. Do not use for real invoices, salary calculations, API billing, or non-Codex activity.
+description: Generate and open a privacy-first local AI work receipt from Codex session metadata. Use when the user asks Codex to create, regenerate, open, or locate an “AI 打工小票” or “AI work receipt” for the latest session, today, the last seven days, or this week, in Chinese or English. Do not use for real invoices, salary calculations, API billing, or non-Codex activity.
 ---
 
 # AI 打工小票
@@ -11,13 +11,16 @@ Use the published `codex-work-receipt` CLI as the only statistics and rendering 
 
 - Use `--latest` for “刚刚”“这次”“最近一次”“上一段工作” or an unspecified request for one receipt.
 - Use `--today` for “今天”“今日”“今天全部工作” or a daily summary.
+- Use `--range last-7-days` for “最近七天”“近 7 日” or a rolling seven-calendar-day summary.
+- Use `--range this-week` for “本周”“这周” or a Monday-to-now summary.
 - Use `--theme classic` for “经典白票” or no specified theme.
 - Use `--theme diner` for “复古粉票”“粉色小票” or “diner”.
 - Use `--theme payroll` for “夜班绿票”“绿色小票” or “payroll”.
 - Add `--no-open` only when the user asks not to open the browser.
 - Add `--timezone <IANA name>` only when the user explicitly requests another timezone.
 - Use `--lang en` when the user requests English or asks for the receipt in English. Use `--lang zh-CN` otherwise.
-- If the user asks for an unsupported date range, explain that the current version supports only the latest session or today. Do not invent flags.
+- If the user asks to choose interactively, run the CLI without a range flag so it can show the local selector.
+- If the user asks for an unsupported custom date range, explain the available ranges and do not invent flags.
 
 ## Execute
 
