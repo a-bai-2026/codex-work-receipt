@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Turn local Codex activity into a work receipt you can keep and share.</strong><br>
-  One command · Local-first · Three themes · Mobile QR import
+  One command · Local-first · Chinese & English · Three themes · Mobile QR import
 </p>
 
 <p align="center">
@@ -55,13 +55,13 @@ The tool reads timestamps and numerical metadata from local Codex sessions. Gene
 Requires Node.js 20+ and local Codex session records.
 
 ```bash
-npx codex-work-receipt@latest --latest
+npx codex-work-receipt@latest --latest --lang en
 ```
 
 Summarize all Codex activity from today in your local timezone:
 
 ```bash
-npx codex-work-receipt@latest --today
+npx codex-work-receipt@latest --today --lang en
 ```
 
 Outputs are written to `./codex-work-receipt-output/` by default.
@@ -83,7 +83,7 @@ The companion mini program supports QR import, local history, themes, and image 
 Install the AI Work Receipt skill once:
 
 ```bash
-npx codex-work-receipt@latest --install-skill
+npx codex-work-receipt@latest --install-skill --lang en
 ```
 
 Then ask Codex naturally:
@@ -99,6 +99,7 @@ The skill is installed at `~/.agents/skills/ai-work-receipt/` and does not modif
 ## Features
 
 - Latest-session and today summaries
+- Complete Chinese and English receipt copy
 - Three visual receipt themes
 - Turns, user messages, tool calls, interruptions, Tokens, duration, and models
 - Playful AI work points, job titles, and reviews
@@ -110,9 +111,9 @@ The skill is installed at `~/.agents/skills/ai-work-receipt/` and does not modif
 ## Common options
 
 ```bash
-npx codex-work-receipt@latest --latest --theme diner
-npx codex-work-receipt@latest --latest --no-open
-npx codex-work-receipt@latest --today --timezone Asia/Shanghai --output ./my-receipt.html
+npx codex-work-receipt@latest --latest --lang en --theme diner
+npx codex-work-receipt@latest --latest --lang en --no-open
+npx codex-work-receipt@latest --today --lang en --timezone Asia/Shanghai --output ./my-receipt.html
 ```
 
 Run `npx codex-work-receipt@latest --help` for the full option list.

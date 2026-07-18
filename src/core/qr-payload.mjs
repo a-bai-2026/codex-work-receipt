@@ -1,7 +1,17 @@
 import crypto from "node:crypto";
 import zlib from "node:zlib";
 
+import { buildCompensation, getWorkProfileCopy } from "./presentation.mjs";
+
 export function compactReceipt(record) {
+  const profileId = record.presentation.work_profile;
+  const mobileProfile = profileId
+    ? getWorkProfileCopy(profileId, "zh-CN")
+    : { title: record.presentation.work_title, review: record.presentation.review };
+  const mobileCompensation = profileId
+    ? buildCompensation(record.source.scope, record.presentation.compensation?.amount, "zh-CN")
+    : record.presentation.compensation;
+
   return {
     v: record.schema_version,
     i: record.id,
@@ -24,17 +34,19 @@ export function compactReceipt(record) {
       record.stats.tokens.total_tokens,
     ],
     m: record.stats.models,
+    l: record.locale || "zh-CN",
+    r: profileId || null,
     p: [
       record.presentation.default_theme,
-      record.presentation.work_title,
-      record.presentation.review,
-      record.presentation.compensation
+      mobileProfile.title,
+      mobileProfile.review,
+      mobileCompensation
         ? [
-            record.presentation.compensation.label,
-            record.presentation.compensation.amount,
-            record.presentation.compensation.unit,
-            record.presentation.compensation.note,
-            record.presentation.compensation.formula_version,
+            mobileCompensation.label,
+            mobileCompensation.amount,
+            mobileCompensation.unit,
+            mobileCompensation.note,
+            mobileCompensation.formula_version,
           ]
         : null,
     ],

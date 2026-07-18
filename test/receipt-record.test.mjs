@@ -27,8 +27,7 @@ const metrics = {
     total_tokens: 120,
   },
   models: ["test-model"],
-  workTitle: "测试员工",
-  review: "测试完成。",
+  workProfileId: "toolchain-commander",
   workPoints: 128,
 };
 
@@ -39,6 +38,8 @@ test("结构记录只包含统计和隐私声明", () => {
   assert.equal(record.schema_version, 1);
   assert.equal(record.presentation.compensation.amount, 128);
   assert.equal(record.presentation.compensation.unit, "AI 工分");
+  assert.equal(record.presentation.work_profile, "toolchain-commander");
+  assert.equal(record.presentation.work_title, "工具链指挥官");
   assert.equal(record.privacy.contains_prompts, false);
   assert.equal(record.privacy.contains_code, false);
   assert.doesNotMatch(serialized, /"prompt_text":|"response_text":|"file_path":|"filename":/);
@@ -46,6 +47,17 @@ test("结构记录只包含统计和隐私声明", () => {
   const updated = buildReceiptRecord({ ...metrics, toolCalls: 99, endAt: new Date("2026-07-16T17:00:00.000Z") });
   assert.equal(updated.id, record.id);
   assert.notEqual(updated.source.snapshot_hash, record.source.snapshot_hash);
+});
+
+test("英文结构记录使用同一语义角色和英文展示文案", () => {
+  const record = buildReceiptRecord(metrics, "diner", "en");
+
+  assert.equal(record.locale, "en");
+  assert.equal(record.presentation.work_profile, "toolchain-commander");
+  assert.equal(record.presentation.work_title, "Toolchain Commander");
+  assert.match(record.presentation.review, /calling tools/);
+  assert.equal(record.presentation.compensation.label, "SHIFT PAY");
+  assert.equal(record.presentation.compensation.unit, "AI work pts");
 });
 
 test("无扩展名输出不会被结构 JSON 覆盖", () => {

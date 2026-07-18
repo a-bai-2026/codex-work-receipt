@@ -1,4 +1,5 @@
 import { formatDate, formatDuration, formatNumber, formatTime } from "../lib/time.mjs";
+import { buildCompensation, DEFAULT_LOCALE, getReceiptCopy } from "../core/presentation.mjs";
 
 function escapeHtml(value) {
   return String(value)
@@ -13,43 +14,51 @@ function receiptRow(label, value, emphasize = false) {
   return `<div class="receipt-row${emphasize ? " receipt-row--emphasize" : ""}"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
 }
 
+function formatCount(value, units, locale) {
+  const amount = Math.max(0, Math.round(value || 0));
+  const unit = units[amount === 1 ? 0 : 1];
+  return `${formatNumber(amount, locale)} ${unit}`;
+}
+
 export function renderHtml({ record, dataQrDataUrl, miniProgramCodeDataUrl = null }) {
+  const locale = record.locale || DEFAULT_LOCALE;
+  const copy = getReceiptCopy(locale);
   const startAt = new Date(record.period.start_at);
   const endAt = new Date(record.period.end_at);
   const timezone = record.period.timezone;
-  const displayDate = formatDate(endAt, timezone);
-  const businessHours = `${formatTime(startAt, timezone)}—${formatTime(endAt, timezone)}`;
-  const scopeLabel = record.source.scope === "latest" ? "最近一次会话" : "今日全部会话";
-  const modelLabel = record.stats.models.length ? record.stats.models.join(" / ") : "未记录";
+  const displayDate = formatDate(endAt, timezone, locale);
+  const businessHours = `${formatTime(startAt, timezone, locale)}—${formatTime(endAt, timezone, locale)}`;
+  const scopeLabel = copy.scope[record.source.scope] || copy.scope.latest;
+  const modelLabel = record.stats.models.length ? record.stats.models.join(" / ") : copy.modelMissing;
   const receiptNumber = `${record.id.slice(4, 12).toUpperCase()}-${String(record.stats.completed_turns).padStart(3, "0")}`;
-  const compensation = record.presentation.compensation || {
-    label: record.source.scope === "latest" ? "本单工资" : "本日工资",
-    amount: 0,
-    unit: "AI 工分",
-  };
+  const compensation = record.presentation.compensation || buildCompensation(record.source.scope, 0, locale);
+  const responseSeconds = new Intl.NumberFormat(locale === "en" ? "en-US" : "zh-CN", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(record.stats.average_first_token_ms / 1000);
   const rows = [
-    receiptRow("统计范围", scopeLabel),
-    receiptRow("会话数量", `${formatNumber(record.stats.session_count)} 场`),
-    receiptRow("完成轮次", `${formatNumber(record.stats.completed_turns)} 轮`),
-    receiptRow("用户消息", `${formatNumber(record.stats.user_messages)} 条`),
-    receiptRow("工具调用", `${formatNumber(record.stats.tool_calls)} 次`),
-    receiptRow("消耗 Token", formatNumber(record.stats.tokens.total_tokens), true),
-    receiptRow("其中缓存输入", formatNumber(record.stats.tokens.cached_input_tokens)),
-    receiptRow("被人类打断", `${formatNumber(record.stats.interruptions)} 次`),
-    receiptRow("平均首次响应", `${(record.stats.average_first_token_ms / 1000).toFixed(1)} 秒`),
-    receiptRow("AI 工作时长", formatDuration(record.stats.work_duration_ms), true),
+    receiptRow(copy.rows.scope, scopeLabel),
+    receiptRow(copy.rows.sessions, formatCount(record.stats.session_count, copy.units.sessions, locale)),
+    receiptRow(copy.rows.turns, formatCount(record.stats.completed_turns, copy.units.turns, locale)),
+    receiptRow(copy.rows.messages, formatCount(record.stats.user_messages, copy.units.messages, locale)),
+    receiptRow(copy.rows.tools, formatCount(record.stats.tool_calls, copy.units.tools, locale)),
+    receiptRow(copy.rows.tokens, formatNumber(record.stats.tokens.total_tokens, locale), true),
+    receiptRow(copy.rows.cachedTokens, formatNumber(record.stats.tokens.cached_input_tokens, locale)),
+    receiptRow(copy.rows.interruptions, formatCount(record.stats.interruptions, copy.units.interruptions, locale)),
+    receiptRow(copy.rows.firstResponse, `${responseSeconds} ${copy.units.seconds[1]}`),
+    receiptRow(copy.rows.duration, formatDuration(record.stats.work_duration_ms), true),
   ].join("");
 
   const miniProgramVisual = miniProgramCodeDataUrl
-    ? `<img src="${miniProgramCodeDataUrl}" alt="微信小程序码">`
-    : `<div class="mini-placeholder" role="img" aria-label="小程序码待接入"><span>小程序码</span><strong>待接入</strong></div>`;
+    ? `<img src="${miniProgramCodeDataUrl}" alt="${escapeHtml(copy.miniProgramAlt)}">`
+    : `<div class="mini-placeholder" role="img" aria-label="${escapeHtml(copy.placeholderAria)}"><span>${escapeHtml(copy.placeholderLabel)}</span><strong>${escapeHtml(copy.placeholderValue)}</strong></div>`;
 
   return `<!doctype html>
-<html lang="zh-CN" data-theme="${escapeHtml(record.presentation.default_theme)}">
+<html lang="${escapeHtml(copy.htmlLang)}" data-theme="${escapeHtml(record.presentation.default_theme)}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Codex AI 打工小票 · ${escapeHtml(displayDate)}</title>
+  <title>${escapeHtml(copy.pageTitle)} · ${escapeHtml(displayDate)}</title>
   <style>
     :root {
       color-scheme: light;
@@ -305,24 +314,24 @@ export function renderHtml({ record, dataQrDataUrl, miniProgramCodeDataUrl = nul
 </head>
 <body>
   <main class="page">
-    <nav class="theme-switcher" aria-label="小票主题">
-      <button class="theme-button" type="button" data-theme-value="classic">经典热敏</button>
-      <button class="theme-button" type="button" data-theme-value="diner">餐馆结账</button>
-      <button class="theme-button" type="button" data-theme-value="payroll">办公室工资条</button>
+    <nav class="theme-switcher" aria-label="${escapeHtml(copy.themeAria)}">
+      <button class="theme-button" type="button" data-theme-value="classic">${escapeHtml(copy.themes.classic)}</button>
+      <button class="theme-button" type="button" data-theme-value="diner">${escapeHtml(copy.themes.diner)}</button>
+      <button class="theme-button" type="button" data-theme-value="payroll">${escapeHtml(copy.themes.payroll)}</button>
     </nav>
 
-    <article class="paper receipt" aria-label="Codex AI 打工小票">
+    <article class="paper receipt" aria-label="${escapeHtml(copy.receiptAria)}">
       <header class="brand">
         <div class="brand-mark">C</div>
-        <h1>AI 打工小票</h1>
+        <h1>${escapeHtml(copy.receiptTitle)}</h1>
         <p class="subtitle">CODEX WORK RECEIPT</p>
       </header>
 
       <section class="meta">
-        <div>日期：${escapeHtml(displayDate)}</div>
-        <div>营业时段：${escapeHtml(businessHours)}</div>
-        <div>小票编号：${escapeHtml(receiptNumber)}</div>
-        <div>时区：${escapeHtml(timezone)}</div>
+        <div>${escapeHtml(copy.meta.date)}: ${escapeHtml(displayDate)}</div>
+        <div>${escapeHtml(copy.meta.hours)}: ${escapeHtml(businessHours)}</div>
+        <div>${escapeHtml(copy.meta.number)}: ${escapeHtml(receiptNumber)}</div>
+        <div>${escapeHtml(copy.meta.timezone)}: ${escapeHtml(timezone)}</div>
       </section>
 
       <div class="divider"></div>
@@ -338,37 +347,37 @@ export function renderHtml({ record, dataQrDataUrl, miniProgramCodeDataUrl = nul
       <section class="salary">
         <div class="salary-line">
           <span>${escapeHtml(compensation.label)}</span>
-          <strong>${escapeHtml(formatNumber(compensation.amount))}<small>${escapeHtml(compensation.unit)}</small></strong>
+          <strong>${escapeHtml(formatNumber(compensation.amount, locale))}<small>${escapeHtml(compensation.unit)}</small></strong>
         </div>
       </section>
       <div class="barcode" aria-hidden="true"></div>
       <footer class="footer">
         <div>MODEL · ${escapeHtml(modelLabel)}</div>
-        <div>谢谢惠顾，欢迎明天继续改需求</div>
+        <div>${escapeHtml(copy.footerThanks)}</div>
       </footer>
     </article>
 
-    <section class="paper transfer-stub" aria-label="传到手机导入联">
+    <section class="paper transfer-stub" aria-label="${escapeHtml(copy.transferAria)}">
       <header class="transfer-heading">
-        <h2>传到手机 · LOCAL TRANSFER</h2>
-        <p>主小票保持完整，这一联只负责打开小程序和搬运数据</p>
+        <h2>${escapeHtml(copy.transferTitle)}</h2>
+        <p>${escapeHtml(copy.transferDescription)}</p>
       </header>
       <div class="qr-grid">
         <div class="qr-item">
           <div class="qr-frame">${miniProgramVisual}</div>
-          <strong>1 · 打开小程序</strong>
-          <span>微信扫码进入 AI 打工图鉴</span>
+          <strong>${escapeHtml(copy.openMiniProgram)}</strong>
+          <span>${escapeHtml(copy.openMiniProgramHint)}</span>
         </div>
         <div class="qr-item">
-          <div class="qr-frame"><img src="${dataQrDataUrl}" alt="当前小票数据二维码"></div>
-          <strong>2 · 扫描导入数据</strong>
-          <span>在小程序里点击“从电脑导入”后扫描</span>
+          <div class="qr-frame"><img src="${dataQrDataUrl}" alt="${escapeHtml(copy.dataQrAlt)}"></div>
+          <strong>${escapeHtml(copy.importData)}</strong>
+          <span>${escapeHtml(copy.importDataHint)}</span>
         </div>
       </div>
-      <p class="transfer-note">数据码只包含时间、轮次、Token和工具调用等统计，不包含Prompt、回复正文、代码、项目路径或文件名。</p>
+      <p class="transfer-note">${escapeHtml(copy.transferNote)}</p>
     </section>
 
-    <p class="privacy">结构数据同时保存在本机，未来可以批量导入小程序历史记录。</p>
+    <p class="privacy">${escapeHtml(copy.privacy)}</p>
   </main>
   <script>
     const themes = new Set(["classic", "diner", "payroll"]);

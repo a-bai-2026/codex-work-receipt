@@ -21,19 +21,18 @@ export function dateKey(date, timezone) {
   }).format(date);
 }
 
-export function formatDate(date, timezone) {
-  return new Intl.DateTimeFormat("zh-CN", {
+export function formatDate(date, timezone, locale = "zh-CN") {
+  const formatted = new Intl.DateTimeFormat(locale === "en" ? "en-CA" : "zh-CN", {
     timeZone: timezone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  })
-    .format(date)
-    .replaceAll("/", ".");
+  }).format(date);
+  return locale === "en" ? formatted : formatted.replaceAll("/", ".");
 }
 
-export function formatTime(date, timezone) {
-  return new Intl.DateTimeFormat("zh-CN", {
+export function formatTime(date, timezone, locale = "zh-CN") {
+  return new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "zh-CN", {
     timeZone: timezone,
     hour: "2-digit",
     minute: "2-digit",
@@ -49,7 +48,6 @@ export function formatDuration(milliseconds) {
   return [hours, minutes, seconds].map((value) => String(value).padStart(2, "0")).join(":");
 }
 
-export function formatNumber(value) {
-  return new Intl.NumberFormat("zh-CN").format(Math.max(0, Math.round(value || 0)));
+export function formatNumber(value, locale = "zh-CN") {
+  return new Intl.NumberFormat(locale === "en" ? "en-US" : "zh-CN").format(Math.max(0, Math.round(value || 0)));
 }
-

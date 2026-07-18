@@ -3,14 +3,20 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import {
+  buildCompensation,
+  DEFAULT_LOCALE,
+  getWorkProfileCopy,
+} from "./presentation.mjs";
+
 const SCHEMA_VERSION = 1;
-const COLLECTOR_VERSION = "0.2.0";
+const COLLECTOR_VERSION = "0.3.0";
 
 function fingerprintSessionIds(sessionIds) {
   return crypto.createHash("sha256").update([...sessionIds].sort().join("|")).digest("hex").slice(0, 16);
 }
 
-export function buildReceiptRecord(metrics, defaultTheme = "classic") {
+export function buildReceiptRecord(metrics, defaultTheme = "classic", locale = DEFAULT_LOCALE) {
   const sessionFingerprint = fingerprintSessionIds(metrics.sessionIds);
   const logicalKey = metrics.mode === "latest"
     ? `latest:${sessionFingerprint}`
@@ -24,9 +30,12 @@ export function buildReceiptRecord(metrics, defaultTheme = "classic") {
     turns: metrics.completedTurns,
     interruptions: metrics.interruptions,
   })).digest("hex").slice(0, 16);
+  const workProfileId = metrics.workProfileId || "temporary-hire";
+  const workProfile = getWorkProfileCopy(workProfileId, locale);
 
   return {
     schema_version: SCHEMA_VERSION,
+    locale,
     id,
     generated_at: new Date().toISOString(),
     source: {
@@ -55,15 +64,10 @@ export function buildReceiptRecord(metrics, defaultTheme = "classic") {
     },
     presentation: {
       default_theme: defaultTheme,
-      work_title: metrics.workTitle,
-      review: metrics.review,
-      compensation: {
-        label: metrics.mode === "latest" ? "本单工资" : "本日工资",
-        amount: Number(metrics.workPoints || 0),
-        unit: "AI 工分",
-        note: "按轮次、工具调用、Token 和改需求次数娱乐折算，不代表真实费用。",
-        formula_version: "work_points_v1",
-      },
+      work_profile: workProfileId,
+      work_title: workProfile.title,
+      review: workProfile.review,
+      compensation: buildCompensation(metrics.mode, metrics.workPoints, locale),
     },
     privacy: {
       contains_prompts: false,

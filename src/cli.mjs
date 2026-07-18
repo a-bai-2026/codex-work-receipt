@@ -44,20 +44,26 @@ function openFile(filePath) {
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
-    printHelp();
+    printHelp(options.locale);
     return;
   }
   if (options.installSkill) {
     const installed = installCodexSkill({ projectDir: PROJECT_DIR });
-    console.log(`AI 打工小票 Skill 已安装：${installed.targetDir}`);
-    console.log("以后可以直接对 Codex 说：给刚刚这次工作开一张 AI 打工小票。");
-    console.log("如果当前会话没有识别到新 Skill，请重启 Codex 后再试。");
+    if (options.locale === "en") {
+      console.log(`AI Work Receipt skill installed: ${installed.targetDir}`);
+      console.log("You can now ask Codex: Create an AI work receipt for my latest session.");
+      console.log("Restart Codex if the current session does not detect the new skill.");
+    } else {
+      console.log(`AI 打工小票 Skill 已安装：${installed.targetDir}`);
+      console.log("以后可以直接对 Codex 说：给刚刚这次工作开一张 AI 打工小票。");
+      console.log("如果当前会话没有识别到新 Skill，请重启 Codex 后再试。");
+    }
     return;
   }
 
   const sessions = loadCodexSessions(options.mode);
   const metrics = collectMetrics(sessions, options.mode, options.timezone);
-  const record = buildReceiptRecord(metrics, options.theme);
+  const record = buildReceiptRecord(metrics, options.theme, options.locale);
   const qrPayload = encodeReceiptPayload(record);
   const dataQrDataUrl = await QRCode.toDataURL(qrPayload, {
     errorCorrectionLevel: "M",
@@ -79,12 +85,21 @@ async function main() {
   );
   const persisted = persistReceiptRecord(record, outputFile, options.dataDir);
 
-  console.log(`已生成网页：${outputFile}`);
-  console.log(`结构数据：${persisted.companionPath}`);
-  console.log(`本地历史：${persisted.receiptPath}`);
-  console.log(`统计：${record.stats.completed_turns} 轮 · ${formatNumber(record.stats.tokens.total_tokens)} Token · ${record.stats.tool_calls} 次工具调用`);
-  console.log(`数据二维码：${qrPayload.length} 字符 · schema v${record.schema_version}`);
-  if (!miniProgramCodeDataUrl) console.log("小程序码：尚未配置，页面使用明确占位符");
+  if (options.locale === "en") {
+    console.log(`Generated HTML: ${outputFile}`);
+    console.log(`Structured data: ${persisted.companionPath}`);
+    console.log(`Local history: ${persisted.receiptPath}`);
+    console.log(`Stats: ${record.stats.completed_turns} turns · ${formatNumber(record.stats.tokens.total_tokens, options.locale)} Tokens · ${record.stats.tool_calls} tool calls`);
+    console.log(`Data QR: ${qrPayload.length} characters · schema v${record.schema_version}`);
+    if (!miniProgramCodeDataUrl) console.log("Mini-program code: not configured; using the explicit placeholder");
+  } else {
+    console.log(`已生成网页：${outputFile}`);
+    console.log(`结构数据：${persisted.companionPath}`);
+    console.log(`本地历史：${persisted.receiptPath}`);
+    console.log(`统计：${record.stats.completed_turns} 轮 · ${formatNumber(record.stats.tokens.total_tokens, options.locale)} Token · ${record.stats.tool_calls} 次工具调用`);
+    console.log(`数据二维码：${qrPayload.length} 字符 · schema v${record.schema_version}`);
+    if (!miniProgramCodeDataUrl) console.log("小程序码：尚未配置，页面使用明确占位符");
+  }
   if (options.open) openFile(outputFile);
 }
 

@@ -1,4 +1,5 @@
 import { dateKey, rowDate } from "../lib/time.mjs";
+import { selectWorkProfileId } from "./presentation.mjs";
 
 function zeroUsage() {
   return {
@@ -42,28 +43,6 @@ function sessionTokenUsage(rows, mode, targetDate, timezone) {
     return date && dateKey(date, timezone) < targetDate;
   }).at(-1)?.payload.info.total_token_usage || zeroUsage();
   return subtractUsage(lastToday.payload.info.total_token_usage, baseline);
-}
-
-function pickTitle(metrics) {
-  if (metrics.interruptions >= 3) return "改需求幸存者";
-  if (metrics.toolCalls >= 40) return "工具链指挥官";
-  if (metrics.tokens.total_tokens >= 500_000) return "上下文吞吐兽";
-  if (metrics.completedTurns >= 12) return "连续交付机器";
-  if (metrics.workDurationMs >= 60 * 60 * 1000) return "深夜陪跑员工";
-  if (metrics.completedTurns >= 5) return "稳定推进搭子";
-  return "临时上岗小工";
-}
-
-function pickReview(metrics) {
-  if (metrics.interruptions >= 3) return "方向改了又改，但它还是把工牌戴稳了。";
-  if (metrics.toolCalls >= metrics.completedTurns * 2 && metrics.toolCalls >= 10) {
-    return "今天不是在调用工具，就是在去调用工具的路上。";
-  }
-  if (metrics.tokens.total_tokens >= 500_000) return "一口气吞下大量上下文，脑内风扇疑似起飞。";
-  if (metrics.completedTurns >= 12) return "一轮接一轮地干活，像被塞进了自动售货机。";
-  if (metrics.workDurationMs >= 60 * 60 * 1000) return "人类还没下班，它也只好继续亮着屏幕。";
-  if (metrics.completedTurns >= 5) return "不声不响往前推，属于靠谱但不邀功的那种。";
-  return "刚打完卡，还没来得及形成职场人格。";
 }
 
 function calculateWorkPoints(metrics) {
@@ -164,8 +143,7 @@ export function collectMetrics(sessions, mode, timezone) {
     tokens,
     models: [...models],
   };
-  metrics.workTitle = pickTitle(metrics);
-  metrics.review = pickReview(metrics);
+  metrics.workProfileId = selectWorkProfileId(metrics);
   metrics.workPoints = calculateWorkPoints(metrics);
   return metrics;
 }

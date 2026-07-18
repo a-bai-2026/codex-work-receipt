@@ -1,5 +1,24 @@
-export function printHelp() {
-  console.log(`
+export function printHelp(locale = "zh-CN") {
+  console.log(locale === "en" ? `
+Codex AI Work Receipt
+
+Usage:
+  npx codex-work-receipt@latest --latest --lang en
+  npx codex-work-receipt@latest --today --lang en
+  npx codex-work-receipt@latest --install-skill --lang en
+
+Options:
+  --latest                    Summarize the latest active Codex session (default)
+  --today                     Summarize all Codex activity from today
+  --timezone <name>           Use an IANA timezone, for example Asia/Shanghai
+  --lang <name>               Receipt language: zh-CN, en
+  --theme <name>              Default theme: classic, diner, payroll
+  --output <file>             Set the generated HTML path
+  --data-dir <directory>      Set the local structured-history directory
+  --install-skill             Install the natural-language Codex skill
+  --no-open                   Do not open the browser after generation
+  --help                      Show help
+` : `
 Codex AI 打工小票
 
 用法：
@@ -11,6 +30,7 @@ Codex AI 打工小票
   --latest                    统计最近活跃的 Codex 会话（默认）
   --today                     统计本地时区今天发生的全部 Codex 活动
   --timezone <name>           指定 IANA 时区，例如 Asia/Shanghai
+  --lang <name>               小票语言：zh-CN、en
   --theme <name>              默认主题：classic、diner、payroll
   --output <file>             指定生成的 HTML 文件，默认写入 ./codex-work-receipt-output/
   --data-dir <directory>      指定本地结构数据目录
@@ -24,6 +44,7 @@ export function parseArgs(argv) {
   const result = {
     mode: "latest",
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Shanghai",
+    locale: "zh-CN",
     theme: "classic",
     output: null,
     dataDir: null,
@@ -33,6 +54,7 @@ export function parseArgs(argv) {
 
   const optionsWithValues = new Map([
     ["--timezone", "timezone"],
+    ["--lang", "locale"],
     ["--theme", "theme"],
     ["--output", "output"],
     ["--data-dir", "dataDir"],
@@ -54,6 +76,9 @@ export function parseArgs(argv) {
 
   if (!new Set(["classic", "diner", "payroll"]).has(result.theme)) {
     throw new Error(`不支持的主题：${result.theme}`);
+  }
+  if (!new Set(["zh-CN", "en"]).has(result.locale)) {
+    throw new Error(`不支持的语言：${result.locale}`);
   }
   return result;
 }

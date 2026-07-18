@@ -12,9 +12,11 @@ import {
 } from "../src/core/skill-installer.mjs";
 
 test("安装参数会切换到 Skill 安装模式", () => {
-  const options = parseArgs(["--install-skill"]);
+  const options = parseArgs(["--install-skill", "--lang", "en"]);
   assert.equal(options.installSkill, true);
   assert.equal(options.mode, "latest");
+  assert.equal(options.locale, "en");
+  assert.throws(() => parseArgs(["--lang", "fr"]), /不支持的语言/);
 });
 
 test("Codex Skill 会安装到用户目录并安全覆盖旧版本", () => {

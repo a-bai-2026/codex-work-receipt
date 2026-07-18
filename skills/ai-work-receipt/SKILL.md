@@ -1,6 +1,6 @@
 ---
 name: ai-work-receipt
-description: Generate and open a privacy-first local AI work receipt from Codex session metadata. Use when the user asks Codex to create, regenerate, open, or locate an “AI 打工小票” or “AI work receipt” for the latest session or today, including requests for the classic, diner, or payroll theme. Do not use for real invoices, salary calculations, API billing, or non-Codex activity.
+description: Generate and open a privacy-first local AI work receipt from Codex session metadata. Use when the user asks Codex to create, regenerate, open, or locate an “AI 打工小票” or “AI work receipt” for the latest session or today, in Chinese or English, including requests for the classic, diner, or payroll theme. Do not use for real invoices, salary calculations, API billing, or non-Codex activity.
 ---
 
 # AI 打工小票
@@ -16,6 +16,7 @@ Use the published `codex-work-receipt` CLI as the only statistics and rendering 
 - Use `--theme payroll` for “夜班绿票”“绿色小票” or “payroll”.
 - Add `--no-open` only when the user asks not to open the browser.
 - Add `--timezone <IANA name>` only when the user explicitly requests another timezone.
+- Use `--lang en` when the user requests English or asks for the receipt in English. Use `--lang zh-CN` otherwise.
 - If the user asks for an unsupported date range, explain that the current version supports only the latest session or today. Do not invent flags.
 
 ## Execute
@@ -24,7 +25,7 @@ Use the published `codex-work-receipt` CLI as the only statistics and rendering 
 2. Run from the user's current working directory:
 
 ```bash
-npx --yes codex-work-receipt@latest --latest --theme classic
+npx --yes codex-work-receipt@latest --latest --lang zh-CN --theme classic
 ```
 
 Replace only the mode and optional flags according to the request.
