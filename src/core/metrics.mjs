@@ -12,14 +12,6 @@ function zeroUsage() {
   };
 }
 
-function subtractUsage(after = {}, before = {}) {
-  const result = zeroUsage();
-  for (const key of Object.keys(result)) {
-    result[key] = Math.max(0, Number(after[key] || 0) - Number(before[key] || 0));
-  }
-  return result;
-}
-
 function addUsage(target, source) {
   for (const key of Object.keys(target)) target[key] += Number(source[key] || 0);
 }
@@ -27,23 +19,25 @@ function addUsage(target, source) {
 function sessionTokenUsage(rows, range) {
   const events = rows
     .filter((row) => row.type === "event_msg" && row.payload?.type === "token_count")
-    .filter((row) => row.payload?.info?.total_token_usage)
-    .sort((left, right) => (rowDate(left)?.getTime() || 0) - (rowDate(right)?.getTime() || 0));
+    .filter((row) => row.payload?.info?.total_token_usage);
 
   if (!events.length) return zeroUsage();
-  if (!isCalendarScope(range.scope)) {
-    return { ...zeroUsage(), ...events.at(-1).payload.info.total_token_usage };
+  const totals = zeroUsage();
+  const previous = zeroUsage();
+
+  for (const row of events) {
+    const currentUsage = row.payload.info.total_token_usage;
+    const date = rowDate(row);
+    const selected = !isCalendarScope(range.scope) || isDateInRange(date, range);
+
+    for (const key of Object.keys(totals)) {
+      const current = Math.max(0, Number(currentUsage[key] || 0));
+      if (selected) totals[key] += current >= previous[key] ? current - previous[key] : current;
+      previous[key] = current;
+    }
   }
 
-  const lastInRange = events.filter((row) => isDateInRange(rowDate(row), range)).at(-1);
-  if (!lastInRange) return zeroUsage();
-
-  const baseline = events.filter((row) => {
-    const date = rowDate(row);
-    return date && dateKey(date, range.timezone) < range.startDate;
-  }).at(-1)?.payload.info.total_token_usage || zeroUsage();
-
-  return subtractUsage(lastInRange.payload.info.total_token_usage, baseline);
+  return totals;
 }
 
 function calculateWorkPoints(metrics) {

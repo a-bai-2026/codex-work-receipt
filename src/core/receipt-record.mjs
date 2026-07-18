@@ -3,28 +3,27 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { canonicalStringify, sha256Hex } from "./canonical.mjs";
+import { buildLogicalReceiptKey, buildProtocolReceiptId } from "./fact-identity.mjs";
 import {
   buildCompensation,
   DEFAULT_LOCALE,
   getWorkProfileCopy,
 } from "./presentation.mjs";
 
-const SCHEMA_VERSION = 1;
-const COLLECTOR_VERSION = "0.5.0";
+const SCHEMA_VERSION = 2;
+const SOURCE_VERSION = "cwr2";
+const COLLECTOR_VERSION = "0.6.0";
 
 function fingerprintSessionIds(sessionIds) {
   return crypto.createHash("sha256").update([...sessionIds].sort().join("|")).digest("hex").slice(0, 16);
 }
 
-export function buildReceiptRecord(metrics, defaultTheme = "classic", locale = DEFAULT_LOCALE) {
+export function buildReceiptRecord(metrics, defaultTheme = "classic", locale = DEFAULT_LOCALE, canonical = {}) {
   const sessionFingerprint = fingerprintSessionIds(metrics.sessionIds);
-  const logicalKey = metrics.mode === "latest" || metrics.mode === "session"
-    ? `latest:${sessionFingerprint}`
-    : metrics.mode === "this-week"
-      ? `this-week:${metrics.rangeStartDate}:${metrics.timezone}`
-      : `${metrics.mode}:${metrics.rangeStartDate}:${metrics.rangeEndDate}:${metrics.timezone}`;
-  const id = `cwr_${crypto.createHash("sha256").update(logicalKey).digest("hex").slice(0, 16)}`;
-  const snapshotHash = crypto.createHash("sha256").update(JSON.stringify({
+  const logicalKey = buildLogicalReceiptKey(metrics);
+  const id = buildProtocolReceiptId(SOURCE_VERSION, logicalKey);
+  const snapshotHash = sha256Hex({
     start: metrics.startAt.toISOString(),
     end: metrics.endAt.toISOString(),
     tokens: metrics.tokens,
@@ -34,9 +33,31 @@ export function buildReceiptRecord(metrics, defaultTheme = "classic", locale = D
     scope: metrics.mode,
     rangeStartDate: metrics.rangeStartDate,
     rangeEndDate: metrics.rangeEndDate,
-  })).digest("hex").slice(0, 16);
+  });
   const workProfileId = metrics.workProfileId || "temporary-hire";
   const workProfile = getWorkProfileCopy(workProfileId, locale);
+  const facts = Array.isArray(canonical.facts) ? canonical.facts : [];
+  const coverage = canonical.coverage || {
+    kind: "selected_sessions",
+    scan_mode: "none",
+    start_date: metrics.rangeStartDate,
+    end_date: metrics.rangeEndDate,
+    complete_through_date: null,
+    observed_through_at: new Date().toISOString(),
+  };
+  const manifestCore = {
+    version: 1,
+    fact_schema_version: 1,
+    metric_schema_version: 1,
+    accounting_timezone: "Asia/Shanghai",
+    fact_count: facts.length,
+    fact_ids: facts.map((fact) => fact.fact_id),
+    coverage,
+  };
+  const manifest = {
+    ...manifestCore,
+    manifest_hash: sha256Hex(canonicalStringify(manifestCore)),
+  };
 
   return {
     schema_version: SCHEMA_VERSION,
@@ -45,6 +66,7 @@ export function buildReceiptRecord(metrics, defaultTheme = "classic", locale = D
     generated_at: new Date().toISOString(),
     source: {
       type: "codex",
+      version: SOURCE_VERSION,
       scope: metrics.mode,
       collector_version: COLLECTOR_VERSION,
       logical_key: logicalKey,
@@ -68,6 +90,8 @@ export function buildReceiptRecord(metrics, defaultTheme = "classic", locale = D
       average_first_token_ms: Math.round(metrics.averageFirstTokenMs),
       tokens: { ...metrics.tokens },
       models: [...metrics.models],
+      receipt_work_points: metrics.workPoints,
+      receipt_formula_version: "receipt_work_points_v1",
     },
     presentation: {
       default_theme: defaultTheme,
@@ -83,6 +107,8 @@ export function buildReceiptRecord(metrics, defaultTheme = "classic", locale = D
       contains_paths: false,
       contains_filenames: false,
     },
+    manifest,
+    facts,
   };
 }
 

@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -20,24 +21,33 @@ function readJsonl(filePath) {
   for (const [lineIndex, line] of source.split("\n").entries()) {
     if (!line.trim()) continue;
     try {
-      rows.push(JSON.parse(line));
+      rows.push({ ...JSON.parse(line), __sourceLine: lineIndex + 1 });
     } catch {
       console.warn(`跳过无法解析的记录：${path.basename(filePath)}:${lineIndex + 1}`);
     }
   }
-  return rows;
+  return { rows, source };
 }
 
 function sessionFromFile(file) {
-  const rows = readJsonl(file.filePath);
+  const { rows, source } = readJsonl(file.filePath);
   const meta = rows.find((row) => row.type === "session_meta")?.payload || {};
+  const metadataSessionId = meta.session_id || meta.id || null;
   const timestamps = rows.map(rowDate).filter(Boolean).sort((left, right) => left - right);
   const fallbackDate = new Date(file.modifiedAt);
+  const sourceBuffer = Buffer.from(source, "utf8");
   return {
     rows,
     filePath: file.filePath,
     modifiedAt: file.modifiedAt,
-    sessionId: meta.session_id || meta.id || path.basename(file.filePath, ".jsonl"),
+    sessionId: metadataSessionId || path.basename(file.filePath, ".jsonl"),
+    identityQuality: metadataSessionId ? "metadata" : "filename_fallback",
+    sourceRevision: {
+      kind: "append-only-jsonl-v1",
+      row_count: rows.length,
+      byte_length: sourceBuffer.byteLength,
+      tail_hash: crypto.createHash("sha256").update(sourceBuffer.subarray(-4096)).digest("hex"),
+    },
     startAt: timestamps[0] || fallbackDate,
     endAt: timestamps.at(-1) || fallbackDate,
   };
@@ -62,6 +72,7 @@ function calendarCandidates(files, startDate) {
 export function loadCodexSessions(range) {
   const files = codexSessionFiles();
   let candidates = files;
+  let scanMode = "none";
 
   if (range.scope === "latest") {
     candidates = files.slice(0, 40);
@@ -69,19 +80,28 @@ export function loadCodexSessions(range) {
     const filenameMatches = files.filter((file) => path.basename(file.filePath).includes(range.sessionId));
     candidates = filenameMatches.length ? filenameMatches : files;
   } else {
-    candidates = calendarCandidates(files, range.startDate);
+    const fullScan = process.env.CODEX_WORK_RECEIPT_FULL_SCAN === "1";
+    candidates = fullScan ? files : calendarCandidates(files, range.startDate);
+    scanMode = fullScan ? "full" : "best_effort";
   }
 
   const sessions = candidates
     .map(sessionFromFile)
     .sort((left, right) => right.endAt - left.endAt);
 
-  if (range.scope === "latest") return sessions.slice(0, 1);
+  if (range.scope === "latest") {
+    const selected = sessions.slice(0, 1);
+    selected.scanMode = scanMode;
+    return selected;
+  }
   if (range.scope === "session") {
     const selected = sessions.find((session) => session.sessionId === range.sessionId);
     if (!selected) throw new Error(`没有找到指定的 Codex 会话：${range.sessionId}`);
-    return [selected];
+    const result = [selected];
+    result.scanMode = scanMode;
+    return result;
   }
+  sessions.scanMode = scanMode;
   return sessions;
 }
 

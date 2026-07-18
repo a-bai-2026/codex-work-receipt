@@ -7,9 +7,10 @@ import { fileURLToPath } from "node:url";
 import QRCode from "qrcode";
 
 import { parseArgs, printHelp } from "./core/args.mjs";
+import { buildCanonicalFacts } from "./core/fact-buckets.mjs";
 import { collectMetrics } from "./core/metrics.mjs";
 import { getReceiptCopy } from "./core/presentation.mjs";
-import { encodeReceiptPayload } from "./core/qr-payload.mjs";
+import { encodeReceiptPayloads } from "./core/qr-payload.mjs";
 import { outputSlugForRange, resolveRange } from "./core/range.mjs";
 import { buildReceiptRecord, persistReceiptRecord } from "./core/receipt-record.mjs";
 import { promptForRange } from "./core/selector.mjs";
@@ -77,14 +78,16 @@ async function main() {
   const range = resolveRange(options.mode, options.timezone, new Date(), options.sessionId);
   const sessions = loadCodexSessions(range);
   const metrics = collectMetrics(sessions, range);
-  const record = buildReceiptRecord(metrics, options.theme, options.locale);
-  const qrPayload = encodeReceiptPayload(record);
-  const dataQrDataUrl = await QRCode.toDataURL(qrPayload, {
+  const observedAt = new Date().toISOString();
+  const canonical = buildCanonicalFacts(sessions, range, { observedAt });
+  const record = buildReceiptRecord(metrics, options.theme, options.locale, canonical);
+  const qrPayloads = encodeReceiptPayloads(record);
+  const dataQrDataUrls = await Promise.all(qrPayloads.map((payload) => QRCode.toDataURL(payload, {
     errorCorrectionLevel: "M",
     margin: 2,
     width: 360,
     color: { dark: "#171713", light: "#ffffff" },
-  });
+  })));
 
   const requestedOutput = options.output || path.join(
     DEFAULT_OUTPUT_DIR,
@@ -97,7 +100,7 @@ async function main() {
 
   fs.writeFileSync(
     outputFile,
-    renderHtml({ record, dataQrDataUrl, miniProgramCodeDataUrl }),
+    renderHtml({ record, dataQrDataUrls, miniProgramCodeDataUrl }),
     "utf8",
   );
   const persisted = persistReceiptRecord(record, outputFile, options.dataDir);
@@ -108,7 +111,7 @@ async function main() {
     console.log(`Local history: ${persisted.receiptPath}`);
     console.log(`Range: ${getReceiptCopy(options.locale).scope[record.source.scope]} · ${record.stats.session_count} session(s)`);
     console.log(`Stats: ${record.stats.completed_turns} turns · ${formatNumber(record.stats.tokens.total_tokens, options.locale)} Tokens · ${record.stats.tool_calls} tool calls`);
-    console.log(`Data QR: ${qrPayload.length} characters · schema v${record.schema_version}`);
+    console.log(`Data QR: ${qrPayloads.length} code(s) · ${record.manifest.fact_count} canonical fact(s) · schema v${record.schema_version}`);
     if (!miniProgramCodeDataUrl) console.log("Mini-program code: not configured; using the explicit placeholder");
   } else {
     console.log(`已生成网页：${outputFile}`);
@@ -116,7 +119,7 @@ async function main() {
     console.log(`本地历史：${persisted.receiptPath}`);
     console.log(`统计范围：${getReceiptCopy(options.locale).scope[record.source.scope]} · ${record.stats.session_count} 个会话`);
     console.log(`统计：${record.stats.completed_turns} 轮 · ${formatNumber(record.stats.tokens.total_tokens, options.locale)} Token · ${record.stats.tool_calls} 次工具调用`);
-    console.log(`数据二维码：${qrPayload.length} 字符 · schema v${record.schema_version}`);
+    console.log(`数据二维码：${qrPayloads.length} 个 · ${record.manifest.fact_count} 条规范事实 · schema v${record.schema_version}`);
     if (!miniProgramCodeDataUrl) console.log("小程序码：尚未配置，页面使用明确占位符");
   }
   if (options.open) openFile(outputFile);

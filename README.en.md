@@ -22,6 +22,8 @@
 
 Codex Work Receipt summarizes turns, tool calls, Tokens, duration, and models, then turns them into playful AI work points, a job title, and a review. Receipts never include prompts, responses, source code, project paths, or file names.
 
+Version `0.6.0` uses the cwr2 protocol to create stable privacy-safe facts for each session and calendar day. Overlapping today, last-seven-days, and this-week receipts can be deduplicated by the receiver, and oversized payloads are automatically split into reorderable multipart QR codes.
+
 ## Quickstart
 
 Requires Node.js 20+ and local Codex session records. No clone required; choose today, the last 7 days, this week, or a specific session:
@@ -54,7 +56,7 @@ Codex will choose the range and theme, run the CLI, and open the receipt. See th
 
 ## Desktop to mobile
 
-The desktop page generates a privacy-safe data QR code. The companion WeChat mini program supports QR import, local history, themes, and image export. See [mobile import](docs/mobile-import.en.md).
+The desktop page generates one or more privacy-safe data QR codes. The companion WeChat mini program supports multipart scanning, private history, themes, and image export. See [mobile import](docs/mobile-import.en.md).
 
 ## Docs
 

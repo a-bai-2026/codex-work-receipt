@@ -39,8 +39,9 @@ test("结构记录只包含统计和隐私声明", () => {
   const record = buildReceiptRecord(metrics);
 
   const serialized = JSON.stringify(record);
-  assert.equal(record.schema_version, 1);
-  assert.equal(record.source.collector_version, "0.5.0");
+  assert.equal(record.schema_version, 2);
+  assert.equal(record.source.version, "cwr2");
+  assert.equal(record.source.collector_version, "0.6.0");
   assert.equal(record.presentation.compensation.amount, 128);
   assert.equal(record.presentation.compensation.unit, "AI 工分");
   assert.equal(record.presentation.work_profile, "toolchain-commander");
@@ -48,6 +49,7 @@ test("结构记录只包含统计和隐私声明", () => {
   assert.equal(record.period.range_start_date, "2026-07-17");
   assert.equal(record.privacy.contains_prompts, false);
   assert.equal(record.privacy.contains_code, false);
+  assert.equal(record.manifest.fact_count, 0);
   assert.doesNotMatch(serialized, /"prompt_text":|"response_text":|"file_path":|"filename":/);
 
   const updated = buildReceiptRecord({ ...metrics, toolCalls: 99, endAt: new Date("2026-07-16T17:00:00.000Z") });

@@ -36,7 +36,7 @@ function formatDateKey(value, locale) {
   return locale === "en" ? `${match[2]}/${match[3]}/${match[1]}` : `${match[1]}/${match[2]}/${match[3]}`;
 }
 
-export function renderHtml({ record, dataQrDataUrl, miniProgramCodeDataUrl = null }) {
+export function renderHtml({ record, dataQrDataUrl = null, dataQrDataUrls = null, miniProgramCodeDataUrl = null }) {
   const locale = record.locale || DEFAULT_LOCALE;
   const copy = getReceiptCopy(locale);
   const startAt = new Date(record.period.start_at);
@@ -85,6 +85,17 @@ export function renderHtml({ record, dataQrDataUrl, miniProgramCodeDataUrl = nul
   const miniProgramVisual = miniProgramCodeDataUrl
     ? `<img src="${miniProgramCodeDataUrl}" alt="${escapeHtml(copy.miniProgramAlt)}">`
     : `<div class="mini-placeholder" role="img" aria-label="${escapeHtml(copy.placeholderAria)}"><span>${escapeHtml(copy.placeholderLabel)}</span><strong>${escapeHtml(copy.placeholderValue)}</strong></div>`;
+  const qrUrls = Array.isArray(dataQrDataUrls) && dataQrDataUrls.length
+    ? dataQrDataUrls
+    : dataQrDataUrl
+      ? [dataQrDataUrl]
+      : [];
+  const dataQrItems = qrUrls.map((url, index) => `
+        <div class="qr-item">
+          <div class="qr-frame"><img src="${url}" alt="${escapeHtml(copy.dataQrAlt)} ${index + 1}/${qrUrls.length}"></div>
+          <strong>${escapeHtml(copy.importData)}${qrUrls.length > 1 ? ` ${index + 1}/${qrUrls.length}` : ""}</strong>
+          <span>${escapeHtml(copy.importDataHint)}</span>
+        </div>`).join("");
 
   return `<!doctype html>
 <html lang="${escapeHtml(copy.htmlLang)}" data-theme="${escapeHtml(record.presentation.default_theme)}">
@@ -443,11 +454,7 @@ export function renderHtml({ record, dataQrDataUrl, miniProgramCodeDataUrl = nul
           <strong>${escapeHtml(copy.openMiniProgram)}</strong>
           <span>${escapeHtml(copy.openMiniProgramHint)}</span>
         </div>
-        <div class="qr-item">
-          <div class="qr-frame"><img src="${dataQrDataUrl}" alt="${escapeHtml(copy.dataQrAlt)}"></div>
-          <strong>${escapeHtml(copy.importData)}</strong>
-          <span>${escapeHtml(copy.importDataHint)}</span>
-        </div>
+        ${dataQrItems}
       </div>
       <p class="transfer-note">${escapeHtml(copy.transferNote)}</p>
       </section>
