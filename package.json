@@ -27,17 +27,27 @@
   "scripts": {
     "receipt": "node src/cli.mjs",
     "test": "node --test",
-    "check": "node --check src/cli.mjs && node --check src/core/skill-installer.mjs"
+    "check": "node --check src/cli.mjs && node --check src/core/skill-installer.mjs",
+    "prepublishOnly": "npm test && npm run check"
   },
   "files": [
     "src",
     "skills",
     "templates",
     "assets",
+    "docs",
+    "CHANGELOG.md",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
     "README.md",
     "README.en.md",
+    "SECURITY.md",
     "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "engines": {
     "node": ">=20"
   },
