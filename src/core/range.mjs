@@ -91,9 +91,28 @@ export function calendarDayCount(range) {
   return count;
 }
 
-export function outputSlugForScope(scope) {
-  if (scope === "last-7-days") return "last-7-days";
-  if (scope === "this-week") return "this-week";
-  if (scope === "session") return "session";
-  return scope;
+function safeSlugSegment(value, fallback = "receipt") {
+  const normalized = String(value || "")
+    .trim()
+    .replace(/^cwr_/, "")
+    .replace(/[^a-zA-Z0-9-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 24);
+  return normalized || fallback;
+}
+
+export function outputSlugForRange(range, receiptId = "") {
+  const scope = normalizeScope(range?.scope) || "latest";
+  const startDate = range?.startDate || range?.targetDate || "";
+  const endDate = range?.endDate || range?.targetDate || startDate;
+
+  if (scope === "today") return `today-${safeSlugSegment(endDate, "today")}`;
+  if (scope === "last-7-days" || scope === "this-week") {
+    const dateSpan = startDate === endDate ? endDate : `${startDate}-to-${endDate}`;
+    return `${scope}-${safeSlugSegment(dateSpan, scope)}`;
+  }
+  if (scope === "session") {
+    return `session-${safeSlugSegment(range?.sessionId || receiptId, "selected")}`;
+  }
+  return `latest-${safeSlugSegment(receiptId || endDate, "receipt")}`;
 }

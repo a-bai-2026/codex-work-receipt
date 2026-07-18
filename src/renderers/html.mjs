@@ -1,5 +1,15 @@
+import fs from "node:fs";
+import { createRequire } from "node:module";
+
 import { formatDate, formatDuration, formatNumber, formatTime } from "../lib/time.mjs";
 import { buildCompensation, DEFAULT_LOCALE, getReceiptCopy } from "../core/presentation.mjs";
+
+const require = createRequire(import.meta.url);
+const DOM_TO_IMAGE_SOURCE = fs.readFileSync(require.resolve("dom-to-image-more"), "utf8");
+
+function inlineScript(value) {
+  return String(value).replaceAll("</script", "<\\/script");
+}
 
 function escapeHtml(value) {
   return String(value)
@@ -35,12 +45,16 @@ export function renderHtml({ record, dataQrDataUrl, miniProgramCodeDataUrl = nul
   const displayDate = formatDate(endAt, timezone, locale);
   const rangeStartDate = record.period.range_start_date || formatDateKey(record.period.start_at.slice(0, 10), "zh-CN").replaceAll("/", "-");
   const rangeEndDate = record.period.range_end_date || formatDateKey(record.period.end_at.slice(0, 10), "zh-CN").replaceAll("/", "-");
+  const isCalendarScope = new Set(["today", "last-7-days", "this-week"]).has(record.source.scope);
   const spansMultipleDates = rangeStartDate !== rangeEndDate;
-  const businessPeriod = spansMultipleDates
-    ? `${formatDateKey(rangeStartDate, locale)}—${formatDateKey(rangeEndDate, locale)}`
-    : `${formatTime(startAt, timezone, locale)}—${formatTime(endAt, timezone, locale)}`;
-  const businessPeriodLabel = spansMultipleDates ? copy.meta.period : copy.meta.hours;
   const scopeLabel = copy.scope[record.source.scope] || copy.scope.latest;
+  const dateRange = spansMultipleDates
+    ? `${formatDateKey(rangeStartDate, locale)}—${formatDateKey(rangeEndDate, locale)}`
+    : formatDateKey(rangeEndDate, locale);
+  const businessPeriod = isCalendarScope
+    ? `${dateRange} · ${scopeLabel}`
+    : `${formatTime(startAt, timezone, locale)}—${formatTime(endAt, timezone, locale)}`;
+  const businessPeriodLabel = isCalendarScope ? copy.meta.period : copy.meta.hours;
   const modelLabel = record.stats.models.length ? record.stats.models.join(" / ") : copy.modelMissing;
   const receiptNumber = `${record.id.slice(4, 12).toUpperCase()}-${String(record.stats.completed_turns).padStart(3, "0")}`;
   const compensation = record.presentation.compensation || buildCompensation(record.source.scope, 0, locale);
@@ -48,6 +62,13 @@ export function renderHtml({ record, dataQrDataUrl, miniProgramCodeDataUrl = nul
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   }).format(record.stats.average_first_token_ms / 1000);
+  const exportConfig = JSON.stringify({
+    idleLabel: copy.exportImage,
+    busyLabel: copy.exportingImage,
+    successLabel: copy.exportSuccess,
+    errorLabel: copy.exportError,
+    fileBase: `codex-work-receipt-${record.source.scope}-${spansMultipleDates ? `${rangeStartDate}-to-${rangeEndDate}` : `${rangeEndDate}-${record.id.slice(4, 12)}`}`,
+  }).replaceAll("<", "\\u003c");
   const rows = [
     receiptRow(copy.rows.scope, scopeLabel),
     receiptRow(copy.rows.sessions, formatCount(record.stats.session_count, copy.units.sessions, locale)),
@@ -75,39 +96,39 @@ export function renderHtml({ record, dataQrDataUrl, miniProgramCodeDataUrl = nul
     :root {
       color-scheme: light;
       --ink: #171713;
-      --paper: #fffef4;
-      --desk: #d9d7cb;
-      --desk-soft: #cfcdc1;
-      --muted: #68675f;
-      --line: rgba(23, 23, 19, .42);
-      --accent: rgba(23, 23, 19, .055);
+      --paper: #ffffff;
+      --desk: #eeeae3;
+      --desk-soft: #f6f3ee;
+      --muted: #6d6c65;
+      --line: #aaa8a0;
+      --accent: #f3f2ed;
       --shadow: rgba(31, 30, 24, .18);
-      --mark-bg: transparent;
-      --mark-fg: var(--ink);
+      --mark-bg: #ffffff;
+      --mark-fg: #171713;
     }
     html[data-theme="diner"] {
-      --ink: #7f1e18;
-      --paper: #fff8e8;
-      --desk: #d8a58e;
-      --desk-soft: #f0d4bd;
-      --muted: #9a4b3e;
-      --line: rgba(127, 30, 24, .42);
-      --accent: rgba(198, 54, 38, .08);
-      --shadow: rgba(89, 34, 24, .2);
-      --mark-bg: #bd2f23;
-      --mark-fg: #fff8e8;
+      --ink: #a7475d;
+      --paper: #f7dde3;
+      --desk: #f2ece8;
+      --desk-soft: #faf6f3;
+      --muted: #b46b7b;
+      --line: #d29aa7;
+      --accent: #f0cdd6;
+      --shadow: rgba(116, 58, 72, .18);
+      --mark-bg: #f7dde3;
+      --mark-fg: #a7475d;
     }
     html[data-theme="payroll"] {
-      --ink: #183d67;
-      --paper: #f4f9ff;
-      --desk: #aebdcb;
-      --desk-soft: #dbe5ee;
-      --muted: #53718f;
-      --line: rgba(24, 61, 103, .38);
-      --accent: rgba(40, 104, 166, .075);
-      --shadow: rgba(28, 52, 79, .18);
-      --mark-bg: #183d67;
-      --mark-fg: #f4f9ff;
+      --ink: #ffe077;
+      --paper: #66742f;
+      --desk: #edebe3;
+      --desk-soft: #f7f5ef;
+      --muted: #e8cf74;
+      --line: #9aa35d;
+      --accent: #5c682b;
+      --shadow: rgba(48, 57, 19, .24);
+      --mark-bg: #66742f;
+      --mark-fg: #ffe077;
     }
     * { box-sizing: border-box; }
     body {
@@ -125,11 +146,17 @@ export function renderHtml({ record, dataQrDataUrl, miniProgramCodeDataUrl = nul
       margin: 0 auto;
       padding: 30px 18px 54px;
     }
+    .toolbar {
+      display: grid;
+      justify-items: center;
+      gap: 12px;
+      margin-bottom: 22px;
+    }
     .theme-switcher {
       display: flex;
+      flex-wrap: wrap;
       justify-content: center;
       gap: 8px;
-      margin-bottom: 22px;
     }
     .theme-button {
       appearance: none;
@@ -146,6 +173,35 @@ export function renderHtml({ record, dataQrDataUrl, miniProgramCodeDataUrl = nul
       background: var(--ink);
       color: var(--paper);
     }
+    .export-actions {
+      display: grid;
+      justify-items: center;
+      gap: 6px;
+    }
+    .export-button {
+      appearance: none;
+      min-width: 168px;
+      border: 1px solid var(--ink);
+      border-radius: 999px;
+      background: var(--ink);
+      color: var(--paper);
+      cursor: pointer;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 10px 18px;
+      transition: opacity .15s ease, transform .15s ease;
+    }
+    .export-button:hover { transform: translateY(-1px); }
+    .export-button:disabled { cursor: wait; opacity: .62; transform: none; }
+    .export-status {
+      min-height: 16px;
+      color: var(--muted);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+      font-size: 11px;
+    }
+    .export-status[data-state="error"] { color: #b33a2e; }
+    .export-sheet { padding: 10px 0; }
     .paper {
       position: relative;
       background:
@@ -326,13 +382,20 @@ export function renderHtml({ record, dataQrDataUrl, miniProgramCodeDataUrl = nul
 </head>
 <body>
   <main class="page">
-    <nav class="theme-switcher" aria-label="${escapeHtml(copy.themeAria)}">
-      <button class="theme-button" type="button" data-theme-value="classic">${escapeHtml(copy.themes.classic)}</button>
-      <button class="theme-button" type="button" data-theme-value="diner">${escapeHtml(copy.themes.diner)}</button>
-      <button class="theme-button" type="button" data-theme-value="payroll">${escapeHtml(copy.themes.payroll)}</button>
-    </nav>
+    <div class="toolbar">
+      <nav class="theme-switcher" aria-label="${escapeHtml(copy.themeAria)}">
+        <button class="theme-button" type="button" data-theme-value="classic">${escapeHtml(copy.themes.classic)}</button>
+        <button class="theme-button" type="button" data-theme-value="diner">${escapeHtml(copy.themes.diner)}</button>
+        <button class="theme-button" type="button" data-theme-value="payroll">${escapeHtml(copy.themes.payroll)}</button>
+      </nav>
+      <div class="export-actions">
+        <button class="export-button" id="save-receipt-image" type="button">${escapeHtml(copy.exportImage)}</button>
+        <span class="export-status" id="export-status" role="status" aria-live="polite"></span>
+      </div>
+    </div>
 
-    <article class="paper receipt" aria-label="${escapeHtml(copy.receiptAria)}">
+    <div class="export-sheet" id="receipt-export">
+      <article class="paper receipt" aria-label="${escapeHtml(copy.receiptAria)}">
       <header class="brand">
         <div class="brand-mark">C</div>
         <h1>${escapeHtml(copy.receiptTitle)}</h1>
@@ -367,9 +430,9 @@ export function renderHtml({ record, dataQrDataUrl, miniProgramCodeDataUrl = nul
         <div>MODEL · ${escapeHtml(modelLabel)}</div>
         <div>${escapeHtml(copy.footerThanks)}</div>
       </footer>
-    </article>
+      </article>
 
-    <section class="paper transfer-stub" aria-label="${escapeHtml(copy.transferAria)}">
+      <section class="paper transfer-stub" aria-label="${escapeHtml(copy.transferAria)}">
       <header class="transfer-heading">
         <h2>${escapeHtml(copy.transferTitle)}</h2>
         <p>${escapeHtml(copy.transferDescription)}</p>
@@ -387,11 +450,14 @@ export function renderHtml({ record, dataQrDataUrl, miniProgramCodeDataUrl = nul
         </div>
       </div>
       <p class="transfer-note">${escapeHtml(copy.transferNote)}</p>
-    </section>
+      </section>
+    </div>
 
     <p class="privacy">${escapeHtml(copy.privacy)}</p>
   </main>
+  <script>${inlineScript(DOM_TO_IMAGE_SOURCE)}</script>
   <script>
+    const exportConfig = ${exportConfig};
     const themes = new Set(["classic", "diner", "payroll"]);
     const buttons = [...document.querySelectorAll("[data-theme-value]")];
     function applyTheme(theme) {
@@ -404,6 +470,79 @@ export function renderHtml({ record, dataQrDataUrl, miniProgramCodeDataUrl = nul
     let savedTheme = null;
     try { savedTheme = localStorage.getItem("codex-work-receipt-theme"); } catch {}
     applyTheme(savedTheme || document.documentElement.dataset.theme);
+
+    const exportButton = document.getElementById("save-receipt-image");
+    const exportStatus = document.getElementById("export-status");
+    const exportNode = document.getElementById("receipt-export");
+
+    function setExportStatus(message, state = "") {
+      exportStatus.textContent = message;
+      exportStatus.dataset.state = state;
+    }
+
+    function waitForImages(node) {
+      return Promise.all([...node.querySelectorAll("img")].map((image) => {
+        if (image.complete && image.naturalWidth > 0) return Promise.resolve();
+        return new Promise((resolve, reject) => {
+          image.addEventListener("load", resolve, { once: true });
+          image.addEventListener("error", reject, { once: true });
+        });
+      }));
+    }
+
+    function downloadImage(dataUrl, filename) {
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      link.download = filename;
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      if (typeof link.download === "string") link.click();
+      else window.open(dataUrl, "_blank", "noopener");
+      link.remove();
+    }
+
+    exportButton.addEventListener("click", async () => {
+      if (exportButton.disabled) return;
+      exportButton.disabled = true;
+      exportButton.textContent = exportConfig.busyLabel;
+      setExportStatus("");
+
+      try {
+        if (document.fonts?.ready) await document.fonts.ready;
+        await waitForImages(exportNode);
+        const width = Math.ceil(exportNode.scrollWidth);
+        const height = Math.ceil(exportNode.scrollHeight);
+        const scale = Math.max(2, Math.min(3, 1500 / Math.max(1, width)));
+        const paperColor = getComputedStyle(document.documentElement).getPropertyValue("--paper").trim() || "#ffffff";
+        const dataUrl = await domtoimage.toPng(exportNode, {
+          width,
+          height,
+          scale,
+          pixelRatio: 1,
+          bgcolor: paperColor,
+          cacheBust: false,
+          style: { background: paperColor },
+          onclone(clone) {
+            clone.style.background = paperColor;
+            clone.querySelectorAll(".paper").forEach((paper) => {
+              paper.style.boxShadow = "none";
+            });
+          },
+          logger: {},
+        });
+        const theme = themes.has(document.documentElement.dataset.theme)
+          ? document.documentElement.dataset.theme
+          : "classic";
+        downloadImage(dataUrl, exportConfig.fileBase + "-" + theme + ".png");
+        setExportStatus(exportConfig.successLabel, "success");
+      } catch (error) {
+        console.error(error);
+        setExportStatus(exportConfig.errorLabel, "error");
+      } finally {
+        exportButton.disabled = false;
+        exportButton.textContent = exportConfig.idleLabel;
+      }
+    });
   </script>
 </body>
 </html>`;

@@ -36,7 +36,7 @@ npx codex-work-receipt@latest
 npx codex-work-receipt@latest --today
 ```
 
-网页和结构数据默认保存在 `./codex-work-receipt-output/`。也可以继续使用 `--latest`、`--today` 等非交互参数，详见 [CLI 使用文档](docs/cli.md)。
+网页和结构数据默认保存在 `./codex-work-receipt-output/`。生成的网页支持一键保存包含主小票和二维码导入联的高清长图。也可以继续使用 `--latest`、`--today` 等非交互参数，详见 [CLI 使用文档](docs/cli.md)。
 
 ## 直接跟 Codex 说
 

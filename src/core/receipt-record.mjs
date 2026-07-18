@@ -10,7 +10,7 @@ import {
 } from "./presentation.mjs";
 
 const SCHEMA_VERSION = 1;
-const COLLECTOR_VERSION = "0.4.0";
+const COLLECTOR_VERSION = "0.5.0";
 
 function fingerprintSessionIds(sessionIds) {
   return crypto.createHash("sha256").update([...sessionIds].sort().join("|")).digest("hex").slice(0, 16);

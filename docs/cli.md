@@ -73,9 +73,13 @@ npx codex-work-receipt@latest --latest --theme diner
 
 ```text
 ./codex-work-receipt-output/
-├── codex-receipt-latest.html
-└── codex-receipt-latest.json
+├── codex-receipt-today-2026-07-18.html
+└── codex-receipt-today-2026-07-18.json
 ```
+
+默认文件名会携带统计日期范围；最近会话和指定会话则携带短编号，避免不同日期或会话的小票互相覆盖。
+
+打开生成的 HTML 后，点击“保存完整长图”即可下载高清 PNG。图片包含主小票、小程序码和数据二维码导入联，并自动使用当前选择的主题；主题按钮、网页背景和底部说明不会进入图片。
 
 指定时区和输出路径：
 
@@ -130,4 +134,4 @@ npx codex-work-receipt@latest --help
 - 当前只支持 Codex；Cursor、WorkBuddy 等数据源仍在规划中
 - 暂不统计修改文件数和代码行数，避免不同工具调用方式产生误导
 - 时间范围按每条事件的本地日期筛选，并分别计算每个会话的 Token 区间增量
-- 网页端不直接导出图片，移动端渲染和保存由配套小程序完成
+- 桌面网页导出 PNG 使用浏览器本地渲染，不上传小票数据

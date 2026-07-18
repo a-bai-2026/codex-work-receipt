@@ -73,9 +73,13 @@ Default output:
 
 ```text
 ./codex-work-receipt-output/
-├── codex-receipt-latest.html
-└── codex-receipt-latest.json
+├── codex-receipt-today-2026-07-18.html
+└── codex-receipt-today-2026-07-18.json
 ```
+
+Default filenames include the calendar range. Latest-session and selected-session receipts include a short identifier so receipts from different dates or sessions do not overwrite one another.
+
+Open the generated HTML and click “Save full PNG” to download a high-resolution image. It includes the main receipt, mini-program code, and data QR import stub in the currently selected theme. Theme controls, the page background, and the footer note are excluded.
 
 Set a timezone and output path:
 
@@ -130,4 +134,4 @@ See the [data schema and QR protocol](data-schema.en.md).
 - Codex is the only supported data source; Cursor and WorkBuddy are planned
 - Changed-file and line counts are intentionally omitted until they can be measured consistently
 - Calendar ranges filter individual events by local date and calculate a Token delta for each session
-- Image export is handled by the companion mini program rather than the desktop page
+- Desktop PNG export is rendered locally in the browser and does not upload receipt data

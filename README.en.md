@@ -36,7 +36,7 @@ Summarize all Codex activity from today:
 npx codex-work-receipt@latest --today --lang en
 ```
 
-HTML and structured data are written to `./codex-work-receipt-output/` by default. Non-interactive options such as `--latest` and `--today` remain available; see the [CLI guide](docs/cli.en.md).
+HTML and structured data are written to `./codex-work-receipt-output/` by default. The generated page can save a high-resolution PNG containing the full receipt and QR import stub. Non-interactive options such as `--latest` and `--today` remain available; see the [CLI guide](docs/cli.en.md).
 
 ## Ask Codex directly
 

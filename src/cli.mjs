@@ -10,7 +10,7 @@ import { parseArgs, printHelp } from "./core/args.mjs";
 import { collectMetrics } from "./core/metrics.mjs";
 import { getReceiptCopy } from "./core/presentation.mjs";
 import { encodeReceiptPayload } from "./core/qr-payload.mjs";
-import { outputSlugForScope, resolveRange } from "./core/range.mjs";
+import { outputSlugForRange, resolveRange } from "./core/range.mjs";
 import { buildReceiptRecord, persistReceiptRecord } from "./core/receipt-record.mjs";
 import { promptForRange } from "./core/selector.mjs";
 import { installCodexSkill } from "./core/skill-installer.mjs";
@@ -88,7 +88,7 @@ async function main() {
 
   const requestedOutput = options.output || path.join(
     DEFAULT_OUTPUT_DIR,
-    `codex-receipt-${outputSlugForScope(options.mode)}.html`,
+    `codex-receipt-${outputSlugForRange(range, record.id)}.html`,
   );
   const outputFile = path.resolve(/\.html?$/i.test(requestedOutput) ? requestedOutput : `${requestedOutput}.html`);
   fs.mkdirSync(path.dirname(outputFile), { recursive: true });

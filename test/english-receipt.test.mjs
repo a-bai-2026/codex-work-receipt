@@ -56,9 +56,25 @@ test("英文 HTML 会完整本地化主要小票内容", () => {
   assert.match(html, /Latest session/);
   assert.match(html, /Toolchain Commander/);
   assert.match(html, /SHIFT PAY/);
-  assert.match(html, /Classic Thermal/);
+  assert.match(html, /Classic White/);
+  assert.match(html, /Vintage Pink/);
+  assert.match(html, /Night Shift Green/);
+  assert.match(html, /--paper: #ffffff/);
+  assert.match(html, /--paper: #f7dde3/);
+  assert.match(html, /--paper: #66742f/);
+  assert.match(html, /--ink: #ffe077/);
   assert.match(html, /Open mini program/);
   assert.match(html, /Structured data is also stored locally/);
+  assert.match(html, /Save full PNG/);
+  assert.match(html, /id="save-receipt-image"/);
+  assert.match(html, /domtoimage\.toPng/);
+
+  const exportStart = html.indexOf('<div class="export-sheet" id="receipt-export">');
+  const exportEnd = html.indexOf('<p class="privacy">', exportStart);
+  const exportMarkup = html.slice(exportStart, exportEnd);
+  assert.match(exportMarkup, /paper receipt/);
+  assert.match(exportMarkup, /paper transfer-stub/);
+  assert.doesNotMatch(exportMarkup, /theme-switcher|save-receipt-image|class="privacy"/);
 });
 
 test("英文网页的数据二维码继续兼容当前中文小程序", () => {
@@ -70,4 +86,23 @@ test("英文网页的数据二维码继续兼容当前中文小程序", () => {
   assert.equal(compact.p[1], "工具链指挥官");
   assert.equal(compact.p[3][0], "本单工资");
   assert.equal(compact.p[3][2], "AI 工分");
+});
+
+test("自然日范围会在小票顶部展示完整统计周期", () => {
+  const record = buildReceiptRecord({
+    ...metrics,
+    mode: "last-7-days",
+    rangeStartDate: "2026-07-12",
+    rangeEndDate: "2026-07-18",
+    startAt: new Date("2026-07-12T02:00:00.000Z"),
+    endAt: new Date("2026-07-18T11:00:00.000Z"),
+  }, "classic", "zh-CN");
+  const html = renderHtml({
+    record,
+    dataQrDataUrl: "data:image/png;base64,DATA",
+    miniProgramCodeDataUrl: "data:image/png;base64,MINI",
+  });
+
+  assert.match(html, /统计周期: 2026\/07\/12—2026\/07\/18 · 最近 7 个自然日/);
+  assert.match(html, /codex-work-receipt-last-7-days-2026-07-12-to-2026-07-18/);
 });

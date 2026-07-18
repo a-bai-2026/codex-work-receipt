@@ -40,6 +40,7 @@ test("结构记录只包含统计和隐私声明", () => {
 
   const serialized = JSON.stringify(record);
   assert.equal(record.schema_version, 1);
+  assert.equal(record.source.collector_version, "0.5.0");
   assert.equal(record.presentation.compensation.amount, 128);
   assert.equal(record.presentation.compensation.unit, "AI 工分");
   assert.equal(record.presentation.work_profile, "toolchain-commander");

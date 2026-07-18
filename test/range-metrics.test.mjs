@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { parseArgs } from "../src/core/args.mjs";
 import { collectMetrics } from "../src/core/metrics.mjs";
-import { resolveRange } from "../src/core/range.mjs";
+import { outputSlugForRange, resolveRange } from "../src/core/range.mjs";
 
 function tokenRow(timestamp, totalTokens) {
   return {
@@ -102,4 +102,15 @@ test("本周范围从周一开始，不等同于最近七天", () => {
   assert.equal(range.startDate, "2026-07-13");
   assert.equal(metrics.completedTurns, 2);
   assert.equal(metrics.tokens.total_tokens, 250);
+});
+
+test("默认输出文件名携带统计日期范围", () => {
+  const today = resolveRange("today", "UTC", new Date("2026-07-18T12:00:00.000Z"));
+  const lastSevenDays = resolveRange("last-7-days", "UTC", new Date("2026-07-18T12:00:00.000Z"));
+  const selectedSession = resolveRange("session", "UTC", new Date("2026-07-18T12:00:00.000Z"), "019f6b93-e6dd-71c1");
+
+  assert.equal(outputSlugForRange(today, "cwr_today"), "today-2026-07-18");
+  assert.equal(outputSlugForRange(lastSevenDays, "cwr_week"), "last-7-days-2026-07-12-to-2026-07-18");
+  assert.equal(outputSlugForRange(selectedSession, "cwr_session"), "session-019f6b93-e6dd-71c1");
+  assert.equal(outputSlugForRange(resolveRange("latest", "UTC", new Date("2026-07-18T12:00:00.000Z")), "cwr_b53471f95d344607"), "latest-b53471f95d344607");
 });
