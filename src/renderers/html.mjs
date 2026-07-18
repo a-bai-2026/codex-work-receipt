@@ -357,7 +357,7 @@ export function renderHtml({ record, dataQrDataUrl, miniProgramCodeDataUrl = nul
         <div class="qr-item">
           <div class="qr-frame">${miniProgramVisual}</div>
           <strong>1 · 打开小程序</strong>
-          <span>正式小程序码接入后替换此处</span>
+          <span>微信扫码进入 AI 打工图鉴</span>
         </div>
         <div class="qr-item">
           <div class="qr-frame"><img src="${dataQrDataUrl}" alt="当前小票数据二维码"></div>

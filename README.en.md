@@ -78,6 +78,8 @@ Local Codex sessions
 
 The companion mini program supports QR import, local history, themes, and image export. It is a separate mobile product: **this repository does not include its source code, AppID, backend, or service credentials**.
 
+The generated desktop page includes the fixed official mini-program code. Scan it with WeChat to open the companion mini program, then scan the adjacent data QR code to import the current receipt.
+
 ## Features
 
 - Latest-session and today summaries
