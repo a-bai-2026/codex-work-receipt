@@ -70,7 +70,7 @@ The desktop page generates a privacy-safe data QR code. The companion WeChat min
 <p align="center">
   <a href="https://modelflare.dev/"><img src="docs/images/sponsors/modelflare-logo.png" alt="ModelFlare Logo" width="56"></a><br>
   <a href="https://modelflare.dev/"><strong>ModelFlare</strong></a> · <a href="https://modelflare.dev/">modelflare.dev</a><br>
-  <sub>Stable access to leading AI model APIs at a very low cost, with transparent pricing and clear usage.</sub>
+  <sub>Helping independent developers access leading AI model APIs reliably and at a very low cost, so they can quickly build their own products with advanced model capabilities.</sub>
 </p>
 
 ## License
