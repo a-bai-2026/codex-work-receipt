@@ -99,9 +99,9 @@ Codex 会选择统计范围和主题、执行命令并打开小票。详见 [Cod
 ## 赞助商
 
 <p align="center">
-  <a href="https://modelflare.dev/"><img src="docs/images/sponsors/modelflare-logo.png" alt="ModelFlare Logo" width="56"></a><br>
-  <a href="https://modelflare.dev/"><strong>ModelFlare</strong></a> · <a href="https://modelflare.dev/">modelflare.dev</a><br>
-  <sub>让个人开发者也可以以很低的成本、稳定地接入前沿 AI 模型的 API，借助模型能力快速构建自己的产品。</sub>
+  <a href="https://modelflare.dev/sign-up?partner=OB9YXNSEEGOL"><img src="docs/images/sponsors/modelflare-logo.png" alt="ModelFlare Logo" width="56"></a><br>
+  <a href="https://modelflare.dev/sign-up?partner=OB9YXNSEEGOL"><strong>ModelFlare</strong></a> · <a href="https://modelflare.dev/sign-up?partner=OB9YXNSEEGOL">modelflare.dev</a><br>
+  <sub>为个人开发者提供价格友好、稳定便捷的前沿 AI 模型 API 接入，帮助你更快完成原型验证，把想法变成真正可用的产品。</sub>
 </p>
 
 ## License

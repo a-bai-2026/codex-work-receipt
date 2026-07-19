@@ -99,9 +99,9 @@ The desktop page generates one or more privacy-safe data QR codes. The companion
 ## Sponsor
 
 <p align="center">
-  <a href="https://modelflare.dev/"><img src="docs/images/sponsors/modelflare-logo.png" alt="ModelFlare Logo" width="56"></a><br>
-  <a href="https://modelflare.dev/"><strong>ModelFlare</strong></a> · <a href="https://modelflare.dev/">modelflare.dev</a><br>
-  <sub>Helping independent developers access leading AI model APIs reliably and at a very low cost, so they can quickly build their own products with advanced model capabilities.</sub>
+  <a href="https://modelflare.dev/sign-up?partner=OB9YXNSEEGOL"><img src="docs/images/sponsors/modelflare-logo.png" alt="ModelFlare Logo" width="56"></a><br>
+  <a href="https://modelflare.dev/sign-up?partner=OB9YXNSEEGOL"><strong>ModelFlare</strong></a> · <a href="https://modelflare.dev/sign-up?partner=OB9YXNSEEGOL">modelflare.dev</a><br>
+  <sub>Affordable and reliable access to leading AI model APIs, helping independent developers validate ideas faster and turn them into real products.</sub>
 </p>
 
 ## License
