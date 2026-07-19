@@ -24,7 +24,11 @@
 
 ```text
 cwr1.<checksum>.<deflateRaw(JSON) 的 Base64URL>
+cwr2.<checksum>.<deflateRaw(JSON) 的 Base64URL>
+cwr2p.<transferId>.<partIndex>.<partCount>.<totalChecksum>.<partChecksum>.<chunk>
 ```
+
+`cwr1` 和 `cwr2` 是完整单码。`cwr2p` 是 cwr2 单码字符串的可乱序分片，最多 12 片；小程序先按 transferId 收集全部分片，再校验总 checksum、拼回 cwr2 并解压。HTML 在多分片时每次只轮播一个数据码，协议本身不依赖扫描顺序。
 
 小程序应检查前缀和校验值，再解压并解析数据。未来结构升级通过 `v` 字段兼容。
 

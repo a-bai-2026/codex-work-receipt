@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { Script } from "node:vm";
 
 import { compactReceipt } from "../src/core/qr-payload.mjs";
 import { getWorkProfileCopy, selectWorkProfileId } from "../src/core/presentation.mjs";
@@ -64,10 +65,17 @@ test("英文 HTML 会完整本地化主要小票内容", () => {
   assert.match(html, /--paper: #66742f/);
   assert.match(html, /--ink: #ffe077/);
   assert.match(html, /Open mini program/);
+  assert.match(html, /qr-grid qr-grid--single/);
+  assert.doesNotMatch(html, /id="multipart-live"/);
   assert.match(html, /Structured data is also stored locally/);
   assert.match(html, /Save full PNG/);
   assert.match(html, /id="save-receipt-image"/);
   assert.match(html, /domtoimage\.toPng/);
+  assert.match(html, /data-barcode-value="[A-Z0-9]+-008"/);
+  assert.match(html, /barcode-segment--bar/);
+  assert.match(html, /barcode-segment--space/);
+  assert.match(html, /style="flex-grow:[1-4]"/);
+  assert.doesNotMatch(html, /background: repeating-linear-gradient\(90deg/);
 
   const exportStart = html.indexOf('<div class="export-sheet" id="receipt-export">');
   const exportEnd = html.indexOf('<p class="privacy">', exportStart);
@@ -75,6 +83,36 @@ test("英文 HTML 会完整本地化主要小票内容", () => {
   assert.match(exportMarkup, /paper receipt/);
   assert.match(exportMarkup, /paper transfer-stub/);
   assert.doesNotMatch(exportMarkup, /theme-switcher|save-receipt-image|class="privacy"/);
+});
+
+test("多分片 HTML 只实时展示一个数据码，并保留完整导出联", () => {
+  const record = buildReceiptRecord(metrics, "classic", "zh-CN");
+  const html = renderHtml({
+    record,
+    dataQrDataUrls: [
+      "data:image/png;base64,PART1",
+      "data:image/png;base64,PART2",
+      "data:image/png;base64,PART3",
+    ],
+    miniProgramCodeDataUrl: "data:image/png;base64,MINI",
+  });
+
+  assert.match(html, /id="multipart-live"/);
+  assert.match(html, /id="multipart-setup"/);
+  assert.match(html, /id="multipart-stage" hidden/);
+  assert.match(html, /id="multipart-active-qr"/);
+  assert.equal((html.match(/id="multipart-active-qr"/g) || []).length, 1);
+  assert.match(html, /qr-grid qr-grid--export-only/);
+  assert.match(html, /data-data-qr-index="0"/);
+  assert.match(html, /data-data-qr-index="2"/);
+  assert.match(html, /startMultipartTransfer/);
+  assert.match(html, /showMultipartSetup/);
+  assert.match(html, /exportGridClone\.style\.display = "grid"/);
+  assert.doesNotMatch(html, /qr-grid qr-grid--single/);
+
+  const inlineScripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+  assert.ok(inlineScripts.length > 0);
+  assert.doesNotThrow(() => new Script(inlineScripts.at(-1)[1]));
 });
 
 test("英文网页的数据二维码继续兼容当前中文小程序", () => {

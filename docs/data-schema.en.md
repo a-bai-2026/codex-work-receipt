@@ -24,7 +24,11 @@ The QR payload uses compact fields:
 
 ```text
 cwr1.<checksum>.<Base64URL of deflateRaw(JSON)>
+cwr2.<checksum>.<Base64URL of deflateRaw(JSON)>
+cwr2p.<transferId>.<partIndex>.<partCount>.<totalChecksum>.<partChecksum>.<chunk>
 ```
+
+`cwr1` and `cwr2` are complete single-code payloads. `cwr2p` splits the cwr2 string into up to 12 reorderable parts. The mini program collects a transfer by transferId, validates the total checksum, reconstructs cwr2, and only then decompresses it. Multipart HTML rotates one data code at a time; the protocol does not require scan order.
 
 The mini program validates the prefix and checksum before decompressing and parsing the payload. Future schema versions use the compact `v` field for compatibility.
 

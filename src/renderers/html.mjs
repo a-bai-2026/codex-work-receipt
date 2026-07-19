@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import { createRequire } from "node:module";
 
+import { buildCode128B } from "../core/barcode.mjs";
 import { formatDate, formatDuration, formatNumber, formatTime } from "../lib/time.mjs";
 import { buildCompensation, DEFAULT_LOCALE, getReceiptCopy } from "../core/presentation.mjs";
 
@@ -24,6 +25,16 @@ function receiptRow(label, value, emphasize = false) {
   return `<div class="receipt-row${emphasize ? " receipt-row--emphasize" : ""}"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
 }
 
+function receiptBarcode(value) {
+  const barcode = buildCode128B(value);
+  const segments = barcode.segments.map((segment) => {
+    const kind = segment.isBar ? "bar" : "space";
+    return `<span class="barcode-segment barcode-segment--${kind}" style="flex-grow:${segment.width}"></span>`;
+  }).join("");
+
+  return `<div class="barcode" data-barcode-value="${escapeHtml(barcode.value)}" aria-hidden="true">${segments}</div>`;
+}
+
 function formatCount(value, units, locale) {
   const amount = Math.max(0, Math.round(value || 0));
   const unit = units[amount === 1 ? 0 : 1];
@@ -34,6 +45,13 @@ function formatDateKey(value, locale) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ""));
   if (!match) return String(value || "");
   return locale === "en" ? `${match[2]}/${match[3]}/${match[1]}` : `${match[1]}/${match[2]}/${match[3]}`;
+}
+
+function formatCopy(template, values) {
+  return Object.entries(values).reduce(
+    (result, [key, value]) => result.replaceAll(`{${key}}`, String(value)),
+    String(template),
+  );
 }
 
 export function renderHtml({ record, dataQrDataUrl = null, dataQrDataUrls = null, miniProgramCodeDataUrl = null }) {
@@ -56,7 +74,8 @@ export function renderHtml({ record, dataQrDataUrl = null, dataQrDataUrls = null
     : `${formatTime(startAt, timezone, locale)}—${formatTime(endAt, timezone, locale)}`;
   const businessPeriodLabel = isCalendarScope ? copy.meta.period : copy.meta.hours;
   const modelLabel = record.stats.models.length ? record.stats.models.join(" / ") : copy.modelMissing;
-  const receiptNumber = `${record.id.slice(4, 12).toUpperCase()}-${String(record.stats.completed_turns).padStart(3, "0")}`;
+  const shortReceiptId = record.id.replace(/^cwr2?_/, "").slice(0, 8).toUpperCase() || "UNKNOWN";
+  const receiptNumber = `${shortReceiptId}-${String(record.stats.completed_turns).padStart(3, "0")}`;
   const compensation = record.presentation.compensation || buildCompensation(record.source.scope, 0, locale);
   const responseSeconds = new Intl.NumberFormat(locale === "en" ? "en-US" : "zh-CN", {
     minimumFractionDigits: 1,
@@ -91,11 +110,56 @@ export function renderHtml({ record, dataQrDataUrl = null, dataQrDataUrls = null
       ? [dataQrDataUrl]
       : [];
   const dataQrItems = qrUrls.map((url, index) => `
-        <div class="qr-item">
+        <div class="qr-item" data-data-qr-index="${index}">
           <div class="qr-frame"><img src="${url}" alt="${escapeHtml(copy.dataQrAlt)} ${index + 1}/${qrUrls.length}"></div>
           <strong>${escapeHtml(copy.importData)}${qrUrls.length > 1 ? ` ${index + 1}/${qrUrls.length}` : ""}</strong>
           <span>${escapeHtml(copy.importDataHint)}</span>
         </div>`).join("");
+  const isMultipart = qrUrls.length > 1;
+  const multipartSetupSeconds = 10;
+  const multipartConfig = JSON.stringify({
+    enabled: isMultipart,
+    setupSeconds: multipartSetupSeconds,
+    frameMs: 4000,
+    blankMs: 240,
+    setupHint: copy.multipartOpenHint,
+    partLabel: copy.multipartPartLabel,
+  }).replaceAll("<", "\\u003c");
+  const transferVisual = isMultipart
+    ? `
+      <div class="multipart-live" id="multipart-live">
+        <div class="multipart-panel multipart-setup" id="multipart-setup">
+          <div class="qr-item multipart-setup__item">
+            <div class="qr-frame qr-frame--large">${miniProgramVisual}</div>
+            <strong>${escapeHtml(copy.multipartOpenTitle)}</strong>
+            <span id="multipart-setup-hint">${escapeHtml(formatCopy(copy.multipartOpenHint, { seconds: multipartSetupSeconds }))}</span>
+          </div>
+        </div>
+        <div class="multipart-panel multipart-stage" id="multipart-stage" hidden>
+          <div class="qr-frame qr-frame--large"><img id="multipart-active-qr" alt="${escapeHtml(copy.dataQrAlt)}"></div>
+          <strong class="multipart-stage__title">${escapeHtml(copy.multipartTransferTitle)}</strong>
+          <span class="multipart-stage__part" id="multipart-part-label">${escapeHtml(formatCopy(copy.multipartPartLabel, { current: 1, total: qrUrls.length }))}</span>
+          <span class="multipart-stage__hint">${escapeHtml(copy.multipartTransferHint)}</span>
+          <button class="multipart-secondary" id="multipart-show-mini" type="button">${escapeHtml(copy.multipartRestart)}</button>
+        </div>
+      </div>
+      <div class="qr-grid qr-grid--export-only" hidden>
+        <div class="qr-item">
+          <div class="qr-frame">${miniProgramVisual}</div>
+          <strong>${escapeHtml(copy.openMiniProgram)}</strong>
+          <span>${escapeHtml(copy.openMiniProgramHint)}</span>
+        </div>
+        ${dataQrItems}
+      </div>`
+    : `
+      <div class="qr-grid qr-grid--single">
+        <div class="qr-item">
+          <div class="qr-frame">${miniProgramVisual}</div>
+          <strong>${escapeHtml(copy.openMiniProgram)}</strong>
+          <span>${escapeHtml(copy.openMiniProgramHint)}</span>
+        </div>
+        ${dataQrItems}
+      </div>`;
 
   return `<!doctype html>
 <html lang="${escapeHtml(copy.htmlLang)}" data-theme="${escapeHtml(record.presentation.default_theme)}">
@@ -313,11 +377,28 @@ export function renderHtml({ record, dataQrDataUrl = null, dataQrDataUrls = null
       color: var(--muted);
     }
     .barcode {
+      display: flex;
+      align-items: stretch;
+      box-sizing: border-box;
+      width: 100%;
       height: 48px;
       margin: 18px auto 8px;
-      max-width: 280px;
-      background: repeating-linear-gradient(90deg, var(--ink) 0 2px, transparent 2px 4px, var(--ink) 4px 5px, transparent 5px 8px);
-      opacity: .84;
+      max-width: 320px;
+      padding: 0 20px;
+      overflow: hidden;
+    }
+    .barcode-segment {
+      display: block;
+      flex-basis: 0;
+      flex-shrink: 0;
+      min-width: 0;
+      height: 100%;
+    }
+    .barcode-segment--bar {
+      background: var(--ink);
+    }
+    .barcode-segment--space {
+      background: transparent;
     }
     .footer {
       text-align: center;
@@ -352,6 +433,39 @@ export function renderHtml({ record, dataQrDataUrl = null, dataQrDataUrls = null
     .qr-frame img { display: block; width: 100%; height: 100%; object-fit: contain; }
     .qr-item strong { display: block; font-size: 12px; }
     .qr-item span { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; line-height: 1.45; }
+    .qr-grid--export-only { display: none; }
+    .multipart-live { margin-top: 20px; }
+    .multipart-panel {
+      display: grid;
+      place-items: center;
+      min-height: 310px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--paper) 94%, var(--ink));
+      text-align: center;
+    }
+    .multipart-panel[hidden] { display: none; }
+    .multipart-setup__item { width: 100%; }
+    .qr-frame--large { width: min(100%, 250px); }
+    .multipart-stage__title,
+    .multipart-stage__part,
+    .multipart-stage__hint { display: block; }
+    .multipart-stage__title { margin-top: 4px; font-size: 14px; }
+    .multipart-stage__part { margin-top: 8px; font-size: 12px; font-weight: 800; letter-spacing: .06em; }
+    .multipart-stage__hint { max-width: 360px; margin-top: 6px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+    #multipart-active-qr[aria-busy="true"] { visibility: hidden; }
+    .multipart-secondary {
+      margin-top: 14px;
+      padding: 7px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--ink);
+      background: transparent;
+      font: inherit;
+      font-size: 10px;
+      cursor: pointer;
+    }
+    .multipart-secondary:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
     .mini-placeholder {
       display: grid;
       place-content: center;
@@ -436,7 +550,7 @@ export function renderHtml({ record, dataQrDataUrl = null, dataQrDataUrls = null
           <strong>${escapeHtml(formatNumber(compensation.amount, locale))}<small>${escapeHtml(compensation.unit)}</small></strong>
         </div>
       </section>
-      <div class="barcode" aria-hidden="true"></div>
+      ${receiptBarcode(receiptNumber)}
       <footer class="footer">
         <div>MODEL · ${escapeHtml(modelLabel)}</div>
         <div>${escapeHtml(copy.footerThanks)}</div>
@@ -448,14 +562,7 @@ export function renderHtml({ record, dataQrDataUrl = null, dataQrDataUrls = null
         <h2>${escapeHtml(copy.transferTitle)}</h2>
         <p>${escapeHtml(copy.transferDescription)}</p>
       </header>
-      <div class="qr-grid">
-        <div class="qr-item">
-          <div class="qr-frame">${miniProgramVisual}</div>
-          <strong>${escapeHtml(copy.openMiniProgram)}</strong>
-          <span>${escapeHtml(copy.openMiniProgramHint)}</span>
-        </div>
-        ${dataQrItems}
-      </div>
+      ${transferVisual}
       <p class="transfer-note">${escapeHtml(copy.transferNote)}</p>
       </section>
     </div>
@@ -465,6 +572,7 @@ export function renderHtml({ record, dataQrDataUrl = null, dataQrDataUrls = null
   <script>${inlineScript(DOM_TO_IMAGE_SOURCE)}</script>
   <script>
     const exportConfig = ${exportConfig};
+    const multipartConfig = ${multipartConfig};
     const themes = new Set(["classic", "diner", "payroll"]);
     const buttons = [...document.querySelectorAll("[data-theme-value]")];
     function applyTheme(theme) {
@@ -478,6 +586,88 @@ export function renderHtml({ record, dataQrDataUrl = null, dataQrDataUrls = null
     try { savedTheme = localStorage.getItem("codex-work-receipt-theme"); } catch {}
     applyTheme(savedTheme || document.documentElement.dataset.theme);
 
+    const multipartLive = document.getElementById("multipart-live");
+    if (multipartConfig.enabled && multipartLive) {
+      const setup = document.getElementById("multipart-setup");
+      const setupHint = document.getElementById("multipart-setup-hint");
+      const stage = document.getElementById("multipart-stage");
+      const activeQr = document.getElementById("multipart-active-qr");
+      const partLabel = document.getElementById("multipart-part-label");
+      const showMiniButton = document.getElementById("multipart-show-mini");
+      const urls = [...document.querySelectorAll(".qr-grid--export-only [data-data-qr-index] img")]
+        .map((image) => image.src)
+        .filter(Boolean);
+      let setupTimer = null;
+      let rotationTimer = null;
+      let switchTimer = null;
+      let activeIndex = 0;
+
+      function stopMultipartTimers() {
+        if (setupTimer !== null) clearInterval(setupTimer);
+        if (rotationTimer !== null) clearInterval(rotationTimer);
+        if (switchTimer !== null) clearTimeout(switchTimer);
+        setupTimer = null;
+        rotationTimer = null;
+        switchTimer = null;
+      }
+
+      function setupHintText(seconds) {
+        return String(multipartConfig.setupHint).replaceAll("{seconds}", String(seconds));
+      }
+
+      function partLabelText(index) {
+        return String(multipartConfig.partLabel)
+          .replaceAll("{current}", String(index + 1))
+          .replaceAll("{total}", String(urls.length));
+      }
+
+      function showPart(index, immediate = false) {
+        if (!urls.length) return;
+        activeIndex = (index + urls.length) % urls.length;
+        const applyPart = () => {
+          activeQr.src = urls[activeIndex];
+          activeQr.alt = partLabelText(activeIndex);
+          activeQr.setAttribute("aria-busy", "false");
+          partLabel.textContent = partLabelText(activeIndex);
+          switchTimer = null;
+        };
+        if (immediate) {
+          applyPart();
+          return;
+        }
+        activeQr.setAttribute("aria-busy", "true");
+        switchTimer = setTimeout(applyPart, multipartConfig.blankMs);
+      }
+
+      function startMultipartTransfer() {
+        stopMultipartTimers();
+        setup.hidden = true;
+        stage.hidden = false;
+        showPart(0, true);
+        rotationTimer = setInterval(() => showPart(activeIndex + 1), multipartConfig.frameMs);
+      }
+
+      function showMultipartSetup() {
+        stopMultipartTimers();
+        stage.hidden = true;
+        setup.hidden = false;
+        let remaining = multipartConfig.setupSeconds;
+        setupHint.textContent = setupHintText(remaining);
+        setupTimer = setInterval(() => {
+          remaining -= 1;
+          if (remaining <= 0) {
+            startMultipartTransfer();
+            return;
+          }
+          setupHint.textContent = setupHintText(remaining);
+        }, 1000);
+      }
+
+      showMiniButton.addEventListener("click", showMultipartSetup);
+      window.addEventListener("beforeunload", stopMultipartTimers);
+      showMultipartSetup();
+    }
+
     const exportButton = document.getElementById("save-receipt-image");
     const exportStatus = document.getElementById("export-status");
     const exportNode = document.getElementById("receipt-export");
@@ -488,7 +678,7 @@ export function renderHtml({ record, dataQrDataUrl = null, dataQrDataUrls = null
     }
 
     function waitForImages(node) {
-      return Promise.all([...node.querySelectorAll("img")].map((image) => {
+      return Promise.all([...node.querySelectorAll("img")].filter((image) => image.getAttribute("src")).map((image) => {
         if (image.complete && image.naturalWidth > 0) return Promise.resolve();
         return new Promise((resolve, reject) => {
           image.addEventListener("load", resolve, { once: true });
@@ -531,6 +721,13 @@ export function renderHtml({ record, dataQrDataUrl = null, dataQrDataUrls = null
           style: { background: paperColor },
           onclone(clone) {
             clone.style.background = paperColor;
+            const multipartLiveClone = clone.querySelector(".multipart-live");
+            if (multipartLiveClone) multipartLiveClone.remove();
+            const exportGridClone = clone.querySelector(".qr-grid--export-only");
+            if (exportGridClone) {
+              exportGridClone.removeAttribute("hidden");
+              exportGridClone.style.display = "grid";
+            }
             clone.querySelectorAll(".paper").forEach((paper) => {
               paper.style.boxShadow = "none";
             });

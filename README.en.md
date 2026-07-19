@@ -22,7 +22,7 @@
 
 Codex Work Receipt summarizes turns, tool calls, Tokens, duration, and models, then turns them into playful AI work points, a job title, and a review. Receipts never include prompts, responses, source code, project paths, or file names.
 
-Version `0.6.0` uses the cwr2 protocol to create stable privacy-safe facts for each session and calendar day. Overlapping today, last-seven-days, and this-week receipts can be deduplicated by the receiver, and oversized payloads are automatically split into reorderable multipart QR codes.
+Version `0.6.0` uses the cwr2 protocol to create stable privacy-safe facts for each session and calendar day. Overlapping today, last-seven-days, and this-week receipts can be deduplicated by the receiver, and oversized payloads are automatically split into reorderable multipart QR codes that rotate one at a time in the HTML so the camera never sees multiple data codes at once.
 
 ## Quickstart
 

@@ -79,7 +79,7 @@ Default output:
 
 Default filenames include the calendar range. Latest-session and selected-session receipts include a short identifier so receipts from different dates or sessions do not overwrite one another.
 
-Open the generated HTML and click “Save full PNG” to download a high-resolution image. It includes the main receipt, mini-program code, and data QR import stub in the currently selected theme. Theme controls, the page background, and the footer note are excluded. When cwr2 data exceeds the safe capacity of one QR code, the import stub automatically shows numbered multipart codes that must all be scanned in the mini program.
+Open the generated HTML and click “Save full PNG” to download a high-resolution image. It includes the main receipt, mini-program code, and data QR import stub in the currently selected theme. Theme controls, the page background, and the footer note are excluded. With one data QR, the mini-program code and data code remain side by side. When cwr2 exceeds the safe capacity of one QR code, the page shows the mini-program code first and then rotates multipart data codes one at a time without desktop clicks. The full PNG still includes every numbered part so the offline payload remains complete.
 
 Set a timezone and output path:
 

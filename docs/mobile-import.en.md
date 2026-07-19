@@ -6,9 +6,9 @@ The desktop page shows both the fixed mini-program code and a data QR code for t
 
 1. Scan the fixed mini-program code in WeChat and open the companion mini program.
 2. Tap the desktop-import action.
-3. Scan the adjacent data QR code.
+3. Scan the adjacent data QR code. Multipart receipts rotate one part at a time on the computer, while the mini program automatically reopens scanning until all parts are collected.
 4. Validate the `cwr1`, `cwr2`, or multipart `cwr2p` prefix, checksum, and schema version.
-5. Decompress and parse the privacy-safe metrics.
+5. Single codes decompress immediately. Multipart codes can arrive out of order, and missed parts are collected on the next rotation before the privacy-safe metrics are parsed.
 6. Recognize a session, today, last-seven-days, or this-week range. New receipts use canonical facts for deduplication and are stored in the anonymous account database by default.
 7. Render the selected template with Canvas and save it to the phone.
 
