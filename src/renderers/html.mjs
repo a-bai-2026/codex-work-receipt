@@ -10,6 +10,7 @@ import {
   getRollingSummaryNotice,
   getScopeLabel,
 } from "../core/presentation.mjs";
+import { getHtmlStarPrompt } from "../core/open-source.mjs";
 
 const require = createRequire(import.meta.url);
 const DOM_TO_IMAGE_SOURCE = fs.readFileSync(require.resolve("dom-to-image-more"), "utf8");
@@ -63,6 +64,7 @@ function formatCopy(template, values) {
 export function renderHtml({ record, dataQrDataUrl = null, dataQrDataUrls = null, miniProgramCodeDataUrl = null }) {
   const locale = record.locale || DEFAULT_LOCALE;
   const copy = getReceiptCopy(locale);
+  const githubStarPrompt = getHtmlStarPrompt(locale);
   const startAt = new Date(record.period.start_at);
   const endAt = new Date(record.period.end_at);
   const timezone = record.period.timezone;
@@ -233,10 +235,34 @@ export function renderHtml({ record, dataQrDataUrl = null, dataQrDataUrls = null
     }
     .toolbar {
       display: grid;
+      width: 100%;
       justify-items: center;
       gap: 12px;
       margin-bottom: 22px;
     }
+    .github-star-link {
+      display: inline-flex;
+      justify-self: end;
+      align-items: center;
+      min-height: 32px;
+      padding: 7px 11px;
+      border: 1px solid color-mix(in srgb, var(--ink) 38%, transparent);
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--paper) 78%, transparent);
+      color: var(--ink);
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.35;
+      text-decoration: none;
+      transition: background .15s ease, color .15s ease, transform .15s ease;
+    }
+    .github-star-link:hover,
+    .github-star-link:focus-visible {
+      background: var(--ink);
+      color: var(--paper);
+      transform: translateY(-1px);
+    }
+    .github-star-link:active { transform: translateY(0); }
     .theme-switcher {
       display: flex;
       flex-wrap: wrap;
@@ -515,6 +541,7 @@ export function renderHtml({ record, dataQrDataUrl = null, dataQrDataUrls = null
     }
     @media (max-width: 420px) {
       .page { padding-inline: 10px; }
+      .github-star-link { justify-self: center; text-align: center; }
       .receipt { padding-inline: 20px; }
       .meta { grid-template-columns: 1fr; }
       .meta div:nth-child(even) { text-align: left; }
@@ -525,6 +552,7 @@ export function renderHtml({ record, dataQrDataUrl = null, dataQrDataUrls = null
 <body>
   <main class="page">
     <div class="toolbar">
+      <a class="github-star-link" href="${escapeHtml(githubStarPrompt.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(githubStarPrompt.label)}</a>
       <nav class="theme-switcher" aria-label="${escapeHtml(copy.themeAria)}">
         <button class="theme-button" type="button" data-theme-value="classic">${escapeHtml(copy.themes.classic)}</button>
         <button class="theme-button" type="button" data-theme-value="diner">${escapeHtml(copy.themes.diner)}</button>

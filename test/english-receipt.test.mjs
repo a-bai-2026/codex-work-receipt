@@ -3,6 +3,7 @@ import test from "node:test";
 import { Script } from "node:vm";
 
 import { compactReceipt } from "../src/core/qr-payload.mjs";
+import { OPEN_SOURCE_REPOSITORY_URL } from "../src/core/open-source.mjs";
 import { getWorkProfileCopy, selectWorkProfileId } from "../src/core/presentation.mjs";
 import { buildReceiptRecord } from "../src/core/receipt-record.mjs";
 import { renderHtml } from "../src/renderers/html.mjs";
@@ -69,6 +70,9 @@ test("英文 HTML 会完整本地化主要小票内容", () => {
   assert.doesNotMatch(html, /id="multipart-live"/);
   assert.match(html, /Structured data is also stored locally/);
   assert.match(html, /Save full PNG/);
+  assert.match(html, /Enjoying it\? Star on GitHub ⭐/);
+  assert.equal(html.split(OPEN_SOURCE_REPOSITORY_URL).length - 1, 1);
+  assert.match(html, /class="github-star-link"[^>]+target="_blank"[^>]+rel="noopener noreferrer"/);
   assert.match(html, /id="save-receipt-image"/);
   assert.match(html, /domtoimage\.toPng/);
   assert.match(html, /data-barcode-value="[A-Z0-9]+-008"/);
@@ -83,11 +87,20 @@ test("英文 HTML 会完整本地化主要小票内容", () => {
   assert.match(exportMarkup, /paper receipt/);
   assert.match(exportMarkup, /paper transfer-stub/);
   assert.doesNotMatch(exportMarkup, /theme-switcher|save-receipt-image|class="privacy"/);
+  assert.doesNotMatch(exportMarkup, /github-star-link|Star on GitHub/);
   assert.match(html, /function sanitizeExportNode/);
   assert.match(html, /node\.querySelectorAll\("\[data-data-qr-index\]"\)\.forEach\(\(item\) => item\.remove\(\)\)/);
   assert.match(html, /grid\.style\.gridTemplateColumns = "minmax\(0, 1fr\)"/);
   assert.match(html, /domtoimage\.toPng\(renderNode/);
   assert.match(html, /data-export-mini-label/);
+});
+
+test("中文 HTML 展示对应的 GitHub Star 引导", () => {
+  const record = buildReceiptRecord(metrics, "classic", "zh-CN");
+  const html = renderHtml({ record, dataQrDataUrl: "data:image/png;base64,DATA" });
+
+  assert.match(html, /喜欢这个工具？点个 Star ⭐/);
+  assert.equal(html.split(OPEN_SOURCE_REPOSITORY_URL).length - 1, 1);
 });
 
 test("多分片 HTML 实时轮播数据码，导出时仅保留小程序码", () => {

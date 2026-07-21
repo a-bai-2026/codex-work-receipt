@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.4
+
+- 修复部分 bug。
+
 ## 0.7.3
 
 - Codex 会话日志改为分块逐行解析，避免超大 `.jsonl` 在转成单个 JavaScript 字符串时触发 V8 长度上限。

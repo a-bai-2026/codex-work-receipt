@@ -7,6 +7,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import {
+  getHtmlStarPrompt,
   getOpenSourcePrompt,
   OPEN_SOURCE_REPOSITORY_URL,
   printOpenSourcePrompt,
@@ -86,6 +87,17 @@ test("开源引导为小票和票仔提供独立的中英文文案", () => {
     `开源项目：${OPEN_SOURCE_REPOSITORY_URL}`,
     "如果你也喜欢这个 AI 小票工具，欢迎来 GitHub 给我点个 Star ⭐",
   ]);
+});
+
+test("HTML 小票提供简短的中英文 Star 引导", () => {
+  assert.deepEqual(getHtmlStarPrompt("zh-CN"), {
+    url: OPEN_SOURCE_REPOSITORY_URL,
+    label: "喜欢这个工具？点个 Star ⭐",
+  });
+  assert.deepEqual(getHtmlStarPrompt("en"), {
+    url: OPEN_SOURCE_REPOSITORY_URL,
+    label: "Enjoying it? Star on GitHub ⭐",
+  });
 });
 
 test("小票生成成功后只输出一次项目地址和 Star 引导", () => {

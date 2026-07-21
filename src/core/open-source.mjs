@@ -23,6 +23,11 @@ const PROMPTS = {
   },
 };
 
+const HTML_STAR_LABELS = {
+  "zh-CN": "喜欢这个工具？点个 Star ⭐",
+  en: "Enjoying it? Star on GitHub ⭐",
+};
+
 export function getOpenSourcePrompt(kind = "receipt", locale = "zh-CN") {
   const normalizedLocale = locale === "en" ? "en" : "zh-CN";
   const localized = PROMPTS[normalizedLocale];
@@ -32,6 +37,14 @@ export function getOpenSourcePrompt(kind = "receipt", locale = "zh-CN") {
     label: copy.label,
     message: copy.message,
     separator: normalizedLocale === "en" ? ": " : "：",
+  };
+}
+
+export function getHtmlStarPrompt(locale = "zh-CN") {
+  const normalizedLocale = locale === "en" ? "en" : "zh-CN";
+  return {
+    url: OPEN_SOURCE_REPOSITORY_URL,
+    label: HTML_STAR_LABELS[normalizedLocale],
   };
 }
 
