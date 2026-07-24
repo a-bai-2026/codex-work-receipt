@@ -74,7 +74,63 @@ test("命令行范围参数支持近七日、本周和指定会话", () => {
     { mode: "last-hours", hours: 3 },
   );
   assert.equal(parseArgs(["--range", "last-hours"]).hours, 3);
+  assert.equal(parseArgs(["--custom-range"]).mode, "custom-range");
+  assert.deepEqual(
+    { mode: parseArgs(["--from", "2026-07-01", "--to", "2026-07-07"]).mode,
+      from: parseArgs(["--from", "2026-07-01", "--to", "2026-07-07"]).from,
+      to: parseArgs(["--from", "2026-07-01", "--to", "2026-07-07"]).to },
+    { mode: "custom-range", from: "2026-07-01", to: "2026-07-07" },
+  );
+  assert.equal(parseArgs(["--select-session"]).selectSession, true);
+  assert.equal(parseArgs(["--select-project"]).selectProject, true);
+  assert.equal(parseArgs(["--project", "/tmp/example"]).mode, "today");
+  assert.throws(() => parseArgs(["--from", "2026-07-01"]), /必须同时使用/);
   assert.throws(() => parseArgs(["--hours", "0"]), /1 至 168/);
+});
+
+test("自定义自然日范围生成完整日期边界并按日筛选", () => {
+  const range = resolveRange(
+    "custom-range",
+    "UTC",
+    new Date("2026-07-18T12:00:00.000Z"),
+    null,
+    null,
+    { from: "2026-07-12", to: "2026-07-18" },
+  );
+  const metrics = collectMetrics(sessions, range);
+
+  assert.equal(range.boundaryKind, "calendar-days");
+  assert.equal(range.startAt.toISOString(), "2026-07-12T00:00:00.000Z");
+  assert.equal(range.endAt.toISOString(), "2026-07-19T00:00:00.000Z");
+  assert.equal(metrics.completedTurns, 3);
+  assert.equal(metrics.tokens.total_tokens, 350);
+  assert.equal(metrics.calendarDayCount, 7);
+});
+
+test("自定义精确时间范围使用半开区间并保留 Token 基线", () => {
+  const range = resolveRange(
+    "custom-range",
+    "UTC",
+    new Date("2026-07-18T12:00:00.000Z"),
+    null,
+    null,
+    { from: "2026-07-18T08:00", to: "2026-07-18T09:00" },
+  );
+  const metrics = collectMetrics(sessions, range);
+
+  assert.equal(range.boundaryKind, "exact-time");
+  assert.equal(metrics.sessionCount, 1);
+  assert.equal(metrics.completedTurns, 1);
+  assert.equal(metrics.toolCalls, 1);
+  assert.equal(metrics.tokens.total_tokens, 200);
+  assert.throws(() => resolveRange(
+    "custom-range",
+    "UTC",
+    new Date(),
+    null,
+    null,
+    { from: "2026-07-18T09:00", to: "2026-07-18T08:00" },
+  ), /开始时间必须早于结束时间/);
 });
 
 test("最近小时范围按精确时间筛选并保留 Token 基线", () => {
@@ -184,10 +240,19 @@ test("默认输出文件名携带统计日期范围", () => {
   const lastSevenDays = resolveRange("last-7-days", "UTC", new Date("2026-07-18T12:00:00.000Z"));
   const selectedSession = resolveRange("session", "UTC", new Date("2026-07-18T12:00:00.000Z"), "019f6b93-e6dd-71c1");
   const hours = resolveRange("last-hours", "UTC", new Date("2026-07-18T12:00:00.000Z"), null, 3);
+  const customDates = resolveRange(
+    "custom-range",
+    "UTC",
+    new Date("2026-07-18T12:00:00.000Z"),
+    null,
+    null,
+    { from: "2026-07-01", to: "2026-07-15" },
+  );
 
   assert.equal(outputSlugForRange(today, "cwr_today"), "today-2026-07-18");
   assert.equal(outputSlugForRange(lastSevenDays, "cwr_week"), "last-7-days-2026-07-12-to-2026-07-18");
   assert.equal(outputSlugForRange(selectedSession, "cwr_session"), "session-019f6b93-e6dd-71c1");
   assert.equal(outputSlugForRange(hours, "cwr_hours"), "last-3-hours-20260718T1200");
+  assert.equal(outputSlugForRange(customDates, "cwr_custom"), "custom-2026-07-01-to-2026-07-15");
   assert.equal(outputSlugForRange(resolveRange("latest", "UTC", new Date("2026-07-18T12:00:00.000Z")), "cwr_b53471f95d344607"), "latest-b53471f95d344607");
 });

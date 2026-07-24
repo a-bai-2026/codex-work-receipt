@@ -22,7 +22,7 @@ npx codex-work-receipt@latest
 - `自动保存`：Codex 每完成一轮工作，就静默刷新今天的小票和 `.cwr.json` 微信导入文件
 - `仅手动`：只有执行命令或告诉票仔时才生成
 
-选择仅手动后，命令行会继续让你选择今天全部活动、最近 3 小时、最近 7 个自然日、本周，或最近的某个具体会话。选择具体会话时会展示起止时间、轮次、工具调用和模型，帮助辨认。显式使用 `--today`、`--latest` 等范围参数时不会触发模式问答。
+选择仅手动后，命令行会继续让你选择今天、最近 3 小时、最近 7 个自然日、本周、自定义区间、具体会话或具体项目。选择会话时会展示起止时间、轮次、工具调用和模型；选择项目时会展示本地项目名、最近活动和会话数量。显式使用 `--today`、`--latest` 等范围参数时不会触发模式问答。
 
 ## 自动保存
 
@@ -89,6 +89,38 @@ npx codex-work-receipt@latest --range last-7-days
 npx codex-work-receipt@latest --range this-week
 ```
 
+## 自定义区间、会话与项目
+
+交互选择自定义自然日或精确时间区间：
+
+```bash
+npx codex-work-receipt@latest --custom-range
+```
+
+也可以直接传入边界。日期格式的结束日包含在统计中；时间格式使用半开区间 `[开始, 结束)`：
+
+```bash
+npx codex-work-receipt@latest --from 2026-07-01 --to 2026-07-15
+npx codex-work-receipt@latest --from 2026-07-23T09:00 --to 2026-07-23T18:30
+```
+
+完整自然日范围生成 cwr2 规范事实，可以参与供销社去重统计。精确到时分的范围可能截断自然日，因此生成兼容的私人 cwr1 摘要，不参与供销社统计。
+
+交互选择最近会话或项目：
+
+```bash
+npx codex-work-receipt@latest --select-session
+npx codex-work-receipt@latest --select-project
+```
+
+项目选择后可以继续选择今日、最近 3 小时、最近 7 日、本周或自定义区间。高级用法可以通过本地目录直接指定项目，并与任意范围组合：
+
+```bash
+npx codex-work-receipt@latest --project ./my-project --today
+```
+
+项目名称只用于终端选择；仓库地址或路径会立即转换为本机加盐的匿名项目身份，不会写入 HTML、历史记录或微信导入文件。
+
 ## 语言与主题
 
 生成英文小票：
@@ -148,11 +180,17 @@ npx codex-work-receipt@latest --latest --no-open
 
 | 参数 | 说明 |
 | --- | --- |
-| `--range <name>` | `latest`、`last-hours`、`today`、`last-7-days` 或 `this-week` |
+| `--range <name>` | `latest`、`last-hours`、`custom-range`、`today`、`last-7-days` 或 `this-week` |
 | `--hours <number>` | 统计最近 1～168 小时；等价于 `last-hours` 范围 |
+| `--custom-range` | 交互选择自定义日期或精确时间区间 |
+| `--from <value>` | 自定义开始日期或时间 |
+| `--to <value>` | 自定义结束日期或时间 |
 | `--latest` | 统计最近活跃的 Codex 会话，默认模式 |
 | `--today` | 汇总指定时区今天发生的 Codex 活动 |
 | `--session <id>` | 统计指定的 Codex 会话 |
+| `--select-session` | 交互选择最近的 Codex 会话 |
+| `--project <directory>` | 只统计指定的本地项目目录 |
+| `--select-project` | 交互选择最近项目及统计范围 |
 | `--timezone <name>` | 指定 IANA 时区，例如 `Asia/Shanghai` |
 | `--lang <name>` | `zh-CN`（默认）或 `en` |
 | `--theme <name>` | `classic`、`diner` 或 `payroll` |

@@ -2,7 +2,7 @@
 
 <p><strong>中文</strong> · <a href="./data-schema.en.md">English</a> · <a href="../README.md">返回 README</a></p>
 
-当前完整记录结构版本为 `2`；滚动小时摘要为了兼容继续使用版本 `1`。每次生成都会在本机保存完整结构记录和一份脱敏微信导入文件。
+当前完整记录结构版本为 `2`；滚动小时和自定义精确时间摘要为了兼容继续使用版本 `1`。自定义完整自然日范围使用版本 `2`。每次生成都会在本机保存完整结构记录和一份脱敏微信导入文件。
 
 ## 主要字段
 
@@ -10,7 +10,7 @@
 - `locale`：桌面小票语言，支持 `zh-CN` 和 `en`
 - `id`：根据统计快照生成的匿名 ID
 - `generated_at`：生成时间
-- `source`：数据来源、`scope` 统计范围和采集器版本
+- `source`：数据来源、`scope` 统计范围、`range_kind` 区间精度、可选的 `filter_kind` 和采集器版本
 - `period`：实际活动起止时间、时区，以及 `range_start_date` / `range_end_date` 自然日边界
 - `stats`：轮次、消息、工具、Token、时长，以及本地详细效率洞察
 - `presentation`：默认主题、语言无关的 `work_profile`、本地化工种、点评和 AI 工分
@@ -73,7 +73,7 @@ cwr2p.<transferId>.<partIndex>.<partCount>.<totalChecksum>.<partChecksum>.<chunk
 
 小程序应检查前缀和校验值，再解压并解析数据。未来结构升级通过 `v` 字段兼容。
 
-精简字段 `o` 显式携带 `latest`、`session`、`last-hours`、`today`、`last-7-days` 或 `this-week`；`d[3]` 和 `d[4]` 携带日期边界。今日、近 7 日和本周继续使用 cwr2 canonical facts。`last-hours` 是滚动时间窗，为避免与“会话 × 自然日”事实发生身份冲突，使用兼容的 cwr1 摘要载荷，只进入私人历史、不参与 AI 供销社统计。旧二维码仍可由新版小程序导入。
+精简字段 `o` 显式携带 `latest`、`session`、`last-hours`、`custom-range`、`today`、`last-7-days` 或 `this-week`；`d[0]` / `d[1]` 携带精确边界，`d[3]` / `d[4]` 携带自然日边界。今日、近 7 日、本周和自定义完整自然日范围使用 cwr2 canonical facts。`last-hours` 与自定义精确时间区间可能截断自然日，为避免与“会话 × 自然日”事实发生身份冲突，使用兼容的 cwr1 摘要载荷，只进入私人历史、不参与 AI 供销社统计。项目筛选沿用所选时间范围，只传输筛选后的匿名事实，不传输项目名称、仓库地址或路径。旧二维码仍可由新版小程序导入。
 
 同一 Codex 会话出现多份 append-only 日志修订时，生成器只采用更完整的修订；cwr2 manifest 中的 factId 必须唯一，检测到身份冲突时不会输出可扫码二维码。
 

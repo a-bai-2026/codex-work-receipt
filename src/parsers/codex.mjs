@@ -5,6 +5,7 @@ import path from "node:path";
 
 import { rowDate } from "../lib/time.mjs";
 import { classifyToolName } from "../lib/tool-category.mjs";
+import { projectDescriptorFromSessionMeta } from "../core/project-identity.mjs";
 
 const READ_CHUNK_BYTES = 256 * 1024;
 const MAX_JSONL_ROW_BYTES = 64 * 1024 * 1024;
@@ -115,7 +116,7 @@ function sessionReadError(file, error) {
   );
 }
 
-function readJsonl(file) {
+function readJsonl(file, projectSecret = null) {
   const rows = [];
   const buffer = Buffer.allocUnsafe(READ_CHUNK_BYTES);
   const lineParts = [];
@@ -125,6 +126,7 @@ function readJsonl(file) {
   let tail = Buffer.alloc(0);
   let skippingOversizedLine = false;
   let fileDescriptor = null;
+  let project = null;
 
   const resetLine = () => {
     lineParts.length = 0;
@@ -160,7 +162,11 @@ function readJsonl(file) {
     const line = lineBuffer.toString("utf8").replace(/\r$/, "");
     if (line.trim()) {
       try {
-        const compact = compactRow(JSON.parse(line), lineIndex);
+        const parsed = JSON.parse(line);
+        if (!project && parsed?.type === "session_meta" && projectSecret) {
+          project = projectDescriptorFromSessionMeta(parsed.payload, projectSecret);
+        }
+        const compact = compactRow(parsed, lineIndex);
         if (compact) rows.push(compact);
       } catch {
         console.warn(`跳过无法解析的记录：${file.filePath}:${lineIndex}`);
@@ -200,11 +206,12 @@ function readJsonl(file) {
     rows,
     byteLength: offset,
     tailHash: crypto.createHash("sha256").update(tail).digest("hex"),
+    project,
   };
 }
 
-function sessionFromFile(file) {
-  const { rows, byteLength, tailHash } = readJsonl(file);
+function sessionFromFile(file, projectSecret = null) {
+  const { rows, byteLength, tailHash, project } = readJsonl(file, projectSecret);
   const meta = rows.find((row) => row.type === "session_meta")?.payload || {};
   const metadataSessionId = meta.session_id || meta.id || null;
   const timestamps = rows.map(rowDate).filter(Boolean).sort((left, right) => left - right);
@@ -215,6 +222,8 @@ function sessionFromFile(file) {
     modifiedAt: file.modifiedAt,
     sessionId: metadataSessionId || path.basename(file.filePath, ".jsonl"),
     identityQuality: metadataSessionId ? "metadata" : "filename_fallback",
+    projectId: project?.projectId || null,
+    projectLabel: project?.projectLabel || null,
     sourceRevision: {
       kind: "append-only-jsonl-v1",
       row_count: rows.length,
@@ -281,12 +290,16 @@ export function deduplicateCodexSessions(sessions) {
   return [...selected.values()];
 }
 
-export function loadCodexSessions(range, { codexHome = null } = {}) {
+export function loadCodexSessions(range, { codexHome = null, projectSecret = null } = {}) {
   const files = codexSessionFiles(codexHome);
   let candidates = files;
   let scanMode = "none";
 
-  if (range.scope === "latest") {
+  if (range.projectId) {
+    const fullScan = process.env.CODEX_WORK_RECEIPT_FULL_SCAN === "1";
+    candidates = range.startDate && !fullScan ? calendarCandidates(files, range.startDate) : files;
+    scanMode = fullScan ? "full" : "best_effort";
+  } else if (range.scope === "latest") {
     candidates = files.slice(0, 40);
   } else if (range.scope === "session" && range.sessionId) {
     const filenameMatches = files.filter((file) => path.basename(file.filePath).includes(range.sessionId));
@@ -297,7 +310,8 @@ export function loadCodexSessions(range, { codexHome = null } = {}) {
     scanMode = fullScan ? "full" : "best_effort";
   }
 
-  const sessions = deduplicateCodexSessions(candidates.map(sessionFromFile))
+  const sessions = deduplicateCodexSessions(candidates.map((file) => sessionFromFile(file, projectSecret)))
+    .filter((session) => !range.projectId || session.projectId === range.projectId)
     .sort((left, right) => right.endAt - left.endAt);
 
   if (range.scope === "latest") {
@@ -345,4 +359,35 @@ export function listRecentCodexSessions(limit = 10, { codexHome = null } = {}) {
       model,
     };
   });
+}
+
+export function listRecentCodexProjects(
+  limit = 10,
+  { codexHome = null, projectSecret = null } = {},
+) {
+  if (!projectSecret) throw new Error("列出项目时缺少本地项目身份密钥");
+  const sessions = deduplicateCodexSessions(codexSessionFiles(codexHome)
+    .slice(0, Math.max(120, limit * 20))
+    .map((file) => sessionFromFile(file, projectSecret))
+    .filter((session) => session.rows.length && session.projectId));
+  const projects = new Map();
+  for (const session of sessions) {
+    const current = projects.get(session.projectId);
+    if (!current) {
+      projects.set(session.projectId, {
+        projectId: session.projectId,
+        projectLabel: session.projectLabel,
+        sessionCount: 1,
+        startAt: session.startAt,
+        endAt: session.endAt,
+      });
+      continue;
+    }
+    current.sessionCount += 1;
+    if (session.startAt < current.startAt) current.startAt = session.startAt;
+    if (session.endAt > current.endAt) current.endAt = session.endAt;
+  }
+  return [...projects.values()]
+    .sort((left, right) => right.endAt - left.endAt)
+    .slice(0, limit);
 }

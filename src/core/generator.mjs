@@ -4,6 +4,7 @@ import path from "node:path";
 import { buildCanonicalFacts } from "./fact-buckets.mjs";
 import { createReceiptFile } from "./file-payload.mjs";
 import { collectMetrics } from "./metrics.mjs";
+import { getProjectIdentitySecret } from "./project-identity.mjs";
 import { outputSlugForRange, resolveRange } from "./range.mjs";
 import {
   buildReceiptRecord,
@@ -39,11 +40,22 @@ export async function generateReceipt(
 ) {
   if (!projectDir) throw new Error("生成小票时缺少项目目录");
 
-  const range = resolveRange(options.mode, options.timezone, now, options.sessionId, options.hours);
-  const sessions = loadCodexSessions(range, { codexHome });
+  const range = resolveRange(
+    options.mode,
+    options.timezone,
+    now,
+    options.sessionId,
+    options.hours,
+    options.mode === "custom-range" ? { from: options.from, to: options.to } : null,
+    options.projectId,
+  );
+  const projectSecret = range.projectId ? getProjectIdentitySecret({ dataDir: options.dataDir }) : null;
+  const sessions = loadCodexSessions(range, { codexHome, projectSecret });
   const metrics = collectMetrics(sessions, range);
   const observedAt = now.toISOString();
-  const canonical = range.scope === "last-hours"
+  const summaryOnly = range.scope === "last-hours"
+    || (range.scope === "custom-range" && range.boundaryKind === "exact-time");
+  const canonical = summaryOnly
     ? {}
     : buildCanonicalFacts(sessions, range, { observedAt });
   const record = buildReceiptRecord(metrics, options.theme, options.locale, canonical);

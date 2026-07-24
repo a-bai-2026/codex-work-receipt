@@ -2,7 +2,7 @@
 
 <p><a href="./data-schema.md">中文</a> · <strong>English</strong> · <a href="../README.en.md">Back to README</a></p>
 
-The full receipt schema is currently version `2`; rolling-hour summaries remain on compatible version `1`. Each run saves both the full local record and a privacy-safe WeChat import file.
+The full receipt schema is currently version `2`; rolling-hour and custom exact-time summaries remain on compatible version `1`. Custom whole-calendar-date ranges use version `2`. Each run saves both the full local record and a privacy-safe WeChat import file.
 
 ## Main fields
 
@@ -10,7 +10,7 @@ The full receipt schema is currently version `2`; rolling-hour summaries remain 
 - `locale`: desktop receipt language, `zh-CN` or `en`
 - `id`: anonymous ID derived from the metrics snapshot
 - `generated_at`: generation time
-- `source`: data source, selected `scope`, and collector version
+- `source`: data source, selected `scope`, `range_kind`, optional `filter_kind`, and collector version
 - `period`: actual activity times, timezone, and `range_start_date` / `range_end_date` calendar boundaries
 - `stats`: turns, messages, tools, Tokens, duration, and detailed local efficiency insights
 - `presentation`: default theme, language-neutral `work_profile`, localized role, review, and AI work points
@@ -73,7 +73,7 @@ cwr2p.<transferId>.<partIndex>.<partCount>.<totalChecksum>.<partChecksum>.<chunk
 
 The mini program validates the prefix and checksum before decompressing and parsing the payload. Future schema versions use the compact `v` field for compatibility.
 
-Compact field `o` explicitly carries `latest`, `session`, `last-hours`, `today`, `last-7-days`, or `this-week`. `d[3]` and `d[4]` carry date boundaries. Today, last-seven-days, and this-week receipts continue to use cwr2 canonical facts. `last-hours` is a rolling window, so it uses the compatible cwr1 summary payload to avoid colliding with session-day fact identities; it stays in private history and does not participate in AI Work Cooperative accounting. The updated mini program can still import older QR codes.
+Compact field `o` explicitly carries `latest`, `session`, `last-hours`, `custom-range`, `today`, `last-7-days`, or `this-week`. `d[0]` / `d[1]` carry exact boundaries and `d[3]` / `d[4]` carry calendar-date boundaries. Today, last-seven-days, this-week, and custom whole-calendar-date receipts use cwr2 canonical facts. `last-hours` and custom exact-time ranges may cut through a calendar day, so they use compatible cwr1 summaries to avoid colliding with session-day fact identities; they stay in private history and do not participate in AI Work Cooperative accounting. Project filtering keeps the selected time scope and transfers only filtered anonymous facts, never the project name, repository URL, or path. The updated mini program can still import older QR codes.
 
 When the same Codex session has multiple append-only log revisions, the generator keeps the more complete revision. Fact IDs in a cwr2 manifest must be unique; an identity collision stops QR generation instead of emitting an invalid payload.
 

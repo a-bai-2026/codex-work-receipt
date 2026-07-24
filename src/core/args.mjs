@@ -11,16 +11,25 @@ Usage:
   npx codex-work-receipt@latest --today --lang en
   npx codex-work-receipt@latest --range last-7-days --lang en
   npx codex-work-receipt@latest --range this-week --lang en
+  npx codex-work-receipt@latest --custom-range --lang en
+  npx codex-work-receipt@latest --select-session --lang en
+  npx codex-work-receipt@latest --select-project --lang en
   npx codex-work-receipt@latest --install-skill --lang en
   npx codex-work-receipt@latest --install-companion --lang en
   npx codex-work-receipt@latest --setup --lang en
 
 Options:
-  --range <name>              Range: latest, last-hours, today, last-7-days, this-week
+  --range <name>              Range: latest, last-hours, custom-range, today, last-7-days, this-week
   --hours <number>            Summarize the last 1-168 hours
+  --custom-range              Interactively choose a custom date or time range
+  --from <value>              Custom start: YYYY-MM-DD or YYYY-MM-DDTHH:mm
+  --to <value>                Custom end: YYYY-MM-DD or YYYY-MM-DDTHH:mm
   --latest                    Summarize the latest active Codex session (default)
   --today                     Summarize all Codex activity from today
   --session <id>              Summarize one specific Codex session
+  --select-session            Interactively choose a recent Codex session
+  --project <directory>       Limit the receipt to one local project
+  --select-project            Interactively choose a recent project and range
   --timezone <name>           Use an IANA timezone, for example Asia/Shanghai
   --lang <name>               Receipt language: zh-CN, en
   --theme <name>              Default theme: classic, diner, payroll
@@ -46,16 +55,25 @@ Codex AI 打工小票
   npx codex-work-receipt@latest --today
   npx codex-work-receipt@latest --range last-7-days
   npx codex-work-receipt@latest --range this-week
+  npx codex-work-receipt@latest --custom-range
+  npx codex-work-receipt@latest --select-session
+  npx codex-work-receipt@latest --select-project
   npx codex-work-receipt@latest --install-skill
   npx codex-work-receipt@latest --install-companion
   npx codex-work-receipt@latest --setup
 
 选项：
-  --range <name>              统计范围：latest、last-hours、today、last-7-days、this-week
+  --range <name>              统计范围：latest、last-hours、custom-range、today、last-7-days、this-week
   --hours <number>            统计最近 1～168 小时
+  --custom-range              交互选择自定义日期或精确时间区间
+  --from <value>              自定义开始：YYYY-MM-DD 或 YYYY-MM-DDTHH:mm
+  --to <value>                自定义结束：YYYY-MM-DD 或 YYYY-MM-DDTHH:mm
   --latest                    统计最近活跃的 Codex 会话（默认）
   --today                     统计本地时区今天发生的全部 Codex 活动
   --session <id>              统计指定的 Codex 会话
+  --select-session            交互选择最近的 Codex 会话
+  --project <directory>       只统计指定的本地项目目录
+  --select-project            交互选择最近项目及统计范围
   --timezone <name>           指定 IANA 时区，例如 Asia/Shanghai
   --lang <name>               小票语言：zh-CN、en
   --theme <name>              默认主题：classic、diner、payroll
@@ -79,7 +97,14 @@ export function parseArgs(argv) {
     mode: "latest",
     modeExplicit: false,
     sessionId: null,
+    selectSession: false,
+    project: null,
+    projectId: null,
+    selectProject: false,
     hours: null,
+    customRange: false,
+    from: null,
+    to: null,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Shanghai",
     locale: "zh-CN",
     theme: "classic",
@@ -103,7 +128,10 @@ export function parseArgs(argv) {
     ["--output", "output"],
     ["--data-dir", "dataDir"],
     ["--session", "sessionId"],
+    ["--project", "project"],
     ["--hours", "hours"],
+    ["--from", "from"],
+    ["--to", "to"],
   ]);
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -114,7 +142,13 @@ export function parseArgs(argv) {
     } else if (argument === "--today") {
       result.mode = "today";
       result.modeExplicit = true;
-    } else if (argument === "--install-pet") result.installPet = true;
+    } else if (argument === "--custom-range") {
+      result.mode = "custom-range";
+      result.modeExplicit = true;
+      result.customRange = true;
+    } else if (argument === "--select-session") result.selectSession = true;
+    else if (argument === "--select-project") result.selectProject = true;
+    else if (argument === "--install-pet") result.installPet = true;
     else if (argument === "--uninstall-pet") result.uninstallPet = true;
     else if (argument === "--install-companion") result.installCompanion = true;
     else if (argument === "--range") {
@@ -142,6 +176,10 @@ export function parseArgs(argv) {
       } else if (key === "hours") {
         result.mode = "last-hours";
         result.modeExplicit = true;
+      } else if (key === "from" || key === "to") {
+        result.mode = "custom-range";
+        result.modeExplicit = true;
+        result.customRange = true;
       }
     } else throw new Error(`不认识的参数：${argument}`);
   }
@@ -164,6 +202,18 @@ export function parseArgs(argv) {
     }
   }
   if (result.mode === "last-hours" && result.hours === null) result.hours = 3;
+  if (result.mode === "custom-range") result.customRange = true;
+  if (Boolean(result.from) !== Boolean(result.to)) throw new Error("--from 和 --to 必须同时使用");
+  if (result.selectSession && result.selectProject) throw new Error("不能同时选择会话和项目");
+  if ((result.selectSession || result.selectProject) && result.modeExplicit) {
+    throw new Error("交互选择参数不能与统计范围参数同时使用");
+  }
+  if (result.selectSession && result.project) throw new Error("指定会话时不能同时指定项目");
+  if (result.selectProject && result.project) throw new Error("不能同时使用 --project 和 --select-project");
+  if (result.project && !result.modeExplicit) {
+    result.mode = "today";
+    result.modeExplicit = true;
+  }
   const managementActions = [
     result.setup,
     result.enableAuto,
@@ -172,8 +222,14 @@ export function parseArgs(argv) {
   ].filter(Boolean).length;
   if (managementActions > 1) throw new Error("自动保存管理参数不能同时使用");
   if (managementActions && result.modeExplicit) throw new Error("自动保存管理参数不能与统计范围参数同时使用");
+  if (managementActions && (result.selectSession || result.selectProject || result.project)) {
+    throw new Error("自动保存管理参数不能与会话或项目选择参数同时使用");
+  }
   if (managementActions && (
     result.installSkill || result.installPet || result.uninstallPet || result.installCompanion
   )) throw new Error("自动保存管理参数不能与 Skill 或桌宠管理参数同时使用");
+  if ((result.selectSession || result.selectProject || result.project) && (
+    result.installSkill || result.installPet || result.uninstallPet || result.installCompanion
+  )) throw new Error("会话或项目选择参数不能与 Skill 或桌宠管理参数同时使用");
   return result;
 }

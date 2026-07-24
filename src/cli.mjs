@@ -18,13 +18,19 @@ import {
 import { generateReceipt } from "./core/generator.mjs";
 import { promptForGenerationMode } from "./core/mode-selector.mjs";
 import { printOpenSourcePrompt } from "./core/open-source.mjs";
-import { getRollingSummaryNotice, getScopeLabel } from "./core/presentation.mjs";
+import { getCustomSummaryNotice, getRollingSummaryNotice, getScopeLabel } from "./core/presentation.mjs";
+import { getProjectIdentitySecret, projectDescriptorFromPath } from "./core/project-identity.mjs";
 import { encodeSingleReceiptQr } from "./core/qr-payload.mjs";
-import { promptForRange } from "./core/selector.mjs";
+import {
+  promptForCustomRange,
+  promptForProjectRange,
+  promptForRange,
+  promptForSpecificSession,
+} from "./core/selector.mjs";
 import { installCodexSkill } from "./core/skill-installer.mjs";
 import { installCodexPet, uninstallCodexPet } from "./core/pet-installer.mjs";
 import { formatNumber } from "./lib/time.mjs";
-import { listRecentCodexSessions } from "./parsers/codex.mjs";
+import { listRecentCodexProjects, listRecentCodexSessions } from "./parsers/codex.mjs";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_DIR = path.dirname(SCRIPT_DIR);
@@ -185,6 +191,49 @@ async function main() {
     return;
   }
 
+  if ((options.selectSession || options.selectProject || (options.mode === "custom-range" && !options.from)) && !isInteractive()) {
+    throw new Error("交互选择命令需要在终端中运行；也可以使用 --session、--project、--from 和 --to");
+  }
+
+  let projectSecret = null;
+  const ensureProjectSecret = () => {
+    projectSecret ||= getProjectIdentitySecret({ dataDir: options.dataDir });
+    return projectSecret;
+  };
+  const loadRecentProjects = () => listRecentCodexProjects(10, {
+    projectSecret: ensureProjectSecret(),
+  });
+
+  if (options.project) {
+    options.projectId = projectDescriptorFromPath(options.project, ensureProjectSecret()).projectId;
+  }
+  if (options.selectSession) {
+    const selected = await promptForSpecificSession({
+      locale: options.locale,
+      timezone: options.timezone,
+      loadRecentSessions: () => listRecentCodexSessions(10),
+    });
+    options.mode = selected.mode;
+    options.sessionId = selected.sessionId;
+    options.modeExplicit = true;
+  } else if (options.selectProject) {
+    const selected = await promptForProjectRange({
+      locale: options.locale,
+      timezone: options.timezone,
+      loadRecentProjects,
+    });
+    options.mode = selected.mode;
+    options.projectId = selected.projectId;
+    options.hours = selected.hours || options.hours;
+    options.from = selected.from || options.from;
+    options.to = selected.to || options.to;
+    options.modeExplicit = true;
+  } else if (options.mode === "custom-range" && !options.from) {
+    const selected = await promptForCustomRange({ locale: options.locale, timezone: options.timezone });
+    options.from = selected.from;
+    options.to = selected.to;
+  }
+
   if (!options.modeExplicit && isInteractive()) {
     const workReceiptHome = getWorkReceiptHome({ dataDir: options.dataDir });
     if (!readAutoConfig({ workReceiptHome })) {
@@ -199,10 +248,14 @@ async function main() {
       locale: options.locale,
       timezone: options.timezone,
       loadRecentSessions: () => listRecentCodexSessions(10),
+      loadRecentProjects,
     });
     options.mode = selected.mode;
     options.sessionId = selected.sessionId;
     options.hours = selected.hours || options.hours;
+    options.projectId = selected.projectId || options.projectId;
+    options.from = selected.from || options.from;
+    options.to = selected.to || options.to;
   }
 
   const generated = await generateReceipt(options, {
@@ -235,7 +288,7 @@ async function main() {
     console.log(`Structured data: ${persisted.companionPath}`);
     console.log(`WeChat import file: ${persisted.transferPath}`);
     console.log(`Local history: ${persisted.receiptPath}`);
-    console.log(`Range: ${getScopeLabel(record.source.scope, options.locale, record.source.hours)} · ${record.stats.session_count} session(s)`);
+    console.log(`Range: ${getScopeLabel(record.source.scope, options.locale, record.source.hours, { rangeKind: record.source.range_kind, filterKind: record.source.filter_kind })} · ${record.stats.session_count} session(s)`);
     console.log(`Stats: ${record.stats.completed_turns} turns · ${formatNumber(record.stats.tokens.total_tokens, options.locale)} Tokens · ${record.stats.tool_calls} tool calls`);
     console.log(dataQrDataUrl
       ? `Data QR: available as one code · QR version ${dataQrVersion}`
@@ -246,13 +299,16 @@ async function main() {
     if (record.source.scope === "last-hours") {
       console.log(`Note: ${getRollingSummaryNotice(options.locale, record.source.hours)}`);
     }
+    if (record.source.scope === "custom-range" && record.source.range_kind === "exact-time") {
+      console.log(`Note: ${getCustomSummaryNotice(options.locale)}`);
+    }
     if (!miniProgramCodeDataUrl) console.log("Mini-program code: not configured; using the explicit placeholder");
   } else {
     console.log(`已生成网页：${outputFile}`);
     console.log(`结构数据：${persisted.companionPath}`);
     console.log(`微信导入文件：${persisted.transferPath}`);
     console.log(`本地历史：${persisted.receiptPath}`);
-    console.log(`统计范围：${getScopeLabel(record.source.scope, options.locale, record.source.hours)} · ${record.stats.session_count} 个会话`);
+    console.log(`统计范围：${getScopeLabel(record.source.scope, options.locale, record.source.hours, { rangeKind: record.source.range_kind, filterKind: record.source.filter_kind })} · ${record.stats.session_count} 个会话`);
     console.log(`统计：${record.stats.completed_turns} 轮 · ${formatNumber(record.stats.tokens.total_tokens, options.locale)} Token · ${record.stats.tool_calls} 次工具调用`);
     console.log(dataQrDataUrl
       ? `数据二维码：可用 · 单码 · QR version ${dataQrVersion}`
@@ -262,6 +318,9 @@ async function main() {
       : `导入数据：滚动摘要 · schema v${record.schema_version}`);
     if (record.source.scope === "last-hours") {
       console.log(`提示：${getRollingSummaryNotice(options.locale, record.source.hours)}`);
+    }
+    if (record.source.scope === "custom-range" && record.source.range_kind === "exact-time") {
+      console.log(`提示：${getCustomSummaryNotice(options.locale)}`);
     }
     if (!miniProgramCodeDataUrl) console.log("小程序码：尚未配置，页面使用明确占位符");
   }

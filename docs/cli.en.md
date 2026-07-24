@@ -22,7 +22,7 @@ The first interactive run asks you to choose:
 - `Automatic saving`: quietly refresh today's receipt and `.cwr.json` WeChat import file whenever a Codex turn stops
 - `Manual only`: generate only when you run the command or ask Ticket Buddy
 
-After choosing manual-only mode, choose all activity today, the last 3 hours, the last 7 calendar days, this week, or a specific recent session. Session choices include their time range, turns, tool calls, and model for identification. Explicit range flags such as `--today` and `--latest` never trigger mode setup.
+After choosing manual-only mode, choose today, the last 3 hours, the last 7 calendar days, this week, a custom range, a recent session, or a recent project. Session choices show their time range, turns, tool calls, and model; project choices show a local project name, latest activity, and session count. Explicit range flags such as `--today` and `--latest` never trigger mode setup.
 
 ## Automatic saving
 
@@ -89,6 +89,38 @@ Monday through now:
 npx codex-work-receipt@latest --range this-week --lang en
 ```
 
+## Custom ranges, sessions, and projects
+
+Interactively choose whole calendar dates or an exact date-time range:
+
+```bash
+npx codex-work-receipt@latest --custom-range --lang en
+```
+
+You can also pass boundaries directly. A date-only end is inclusive; exact date-time input uses the half-open interval `[start, end)`:
+
+```bash
+npx codex-work-receipt@latest --from 2026-07-01 --to 2026-07-15 --lang en
+npx codex-work-receipt@latest --from 2026-07-23T09:00 --to 2026-07-23T18:30 --lang en
+```
+
+Whole calendar dates produce cwr2 canonical facts and can participate in cooperative deduplication. Exact time ranges can cut through a calendar day, so they produce compatible private cwr1 summaries instead.
+
+Interactively choose a recent session or project:
+
+```bash
+npx codex-work-receipt@latest --select-session --lang en
+npx codex-work-receipt@latest --select-project --lang en
+```
+
+After selecting a project, choose today, the last 3 hours, the last 7 days, this week, or a custom range. Advanced use can pass a local directory and combine it with any range:
+
+```bash
+npx codex-work-receipt@latest --project ./my-project --today --lang en
+```
+
+Project names appear only in the terminal selector. Repository URLs and paths are immediately replaced with a locally salted anonymous identity and never enter HTML, history, or WeChat import files.
+
 ## Language and themes
 
 Generate a Chinese receipt:
@@ -148,11 +180,17 @@ npx codex-work-receipt@latest --latest --lang en --no-open
 
 | Option | Description |
 | --- | --- |
-| `--range <name>` | `latest`, `last-hours`, `today`, `last-7-days`, or `this-week` |
+| `--range <name>` | `latest`, `last-hours`, `custom-range`, `today`, `last-7-days`, or `this-week` |
 | `--hours <number>` | Summarize the last 1-168 hours |
+| `--custom-range` | Interactively choose custom calendar dates or an exact time range |
+| `--from <value>` | Set the custom start date or date-time |
+| `--to <value>` | Set the custom end date or date-time |
 | `--latest` | Summarize the latest active Codex session; default mode |
 | `--today` | Summarize activity from today in the selected timezone |
 | `--session <id>` | Summarize one specific Codex session |
+| `--select-session` | Interactively choose a recent Codex session |
+| `--project <directory>` | Limit the receipt to one local project directory |
+| `--select-project` | Interactively choose a recent project and range |
 | `--timezone <name>` | Set an IANA timezone such as `Asia/Shanghai` |
 | `--lang <name>` | `zh-CN` (default) or `en` |
 | `--theme <name>` | `classic`, `diner`, or `payroll` |

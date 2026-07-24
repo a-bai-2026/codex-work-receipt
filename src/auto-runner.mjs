@@ -42,7 +42,7 @@ function crossesConfiguredDay(workReceiptHome, left, right) {
   return dateKey(left, timezone) !== dateKey(right, timezone);
 }
 
-function acquireLock(lockPath, pendingPath) {
+function acquireLock(lockPath, pendingPath, pendingAt = new Date()) {
   fs.mkdirSync(path.dirname(lockPath), { recursive: true });
   try {
     const descriptor = fs.openSync(lockPath, "wx");
@@ -55,12 +55,12 @@ function acquireLock(lockPath, pendingPath) {
       const age = Date.now() - fs.statSync(lockPath).mtimeMs;
       if (age > LOCK_STALE_MS) {
         fs.rmSync(lockPath, { force: true });
-        return acquireLock(lockPath, pendingPath);
+        return acquireLock(lockPath, pendingPath, pendingAt);
       }
     } catch {
       // Another worker may have released the lock between checks.
     }
-    fs.writeFileSync(pendingPath, `${new Date().toISOString()}\n`, "utf8");
+    fs.writeFileSync(pendingPath, `${pendingAt.toISOString()}\n`, "utf8");
     return false;
   }
 }
@@ -124,7 +124,7 @@ async function generateOnce({ workReceiptHome, now = new Date() }) {
 export async function runAutomaticReceipt({ workReceiptHome, now = new Date(), retryAfterCoalesce = true }) {
   const lockPath = path.join(workReceiptHome, "auto.lock");
   const pendingPath = path.join(workReceiptHome, "auto.pending");
-  if (!acquireLock(lockPath, pendingPath)) {
+  if (!acquireLock(lockPath, pendingPath, now)) {
     if (!retryAfterCoalesce) return { status: "coalesced" };
     await delay(800);
     if (fs.existsSync(lockPath)) return { status: "coalesced" };

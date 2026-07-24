@@ -52,7 +52,8 @@ function fingerprintSessionIds(sessionIds) {
 export function buildReceiptRecord(metrics, defaultTheme = "classic", locale = DEFAULT_LOCALE, canonical = {}) {
   const sessionFingerprint = fingerprintSessionIds(metrics.sessionIds);
   const logicalKey = buildLogicalReceiptKey(metrics);
-  const summaryOnly = metrics.mode === "last-hours";
+  const summaryOnly = metrics.mode === "last-hours"
+    || (metrics.mode === "custom-range" && metrics.boundaryKind === "exact-time");
   const insights = metrics.insights || fallbackInsights(metrics);
   const schemaVersion = summaryOnly ? 1 : SCHEMA_VERSION;
   const sourceVersion = summaryOnly ? "cwr1" : SOURCE_VERSION;
@@ -72,6 +73,8 @@ export function buildReceiptRecord(metrics, defaultTheme = "classic", locale = D
     rangeEndDate: metrics.rangeEndDate,
     windowStartAt: metrics.windowStartAt?.toISOString() || null,
     windowEndAt: metrics.windowEndAt?.toISOString() || null,
+    boundaryKind: metrics.boundaryKind || null,
+    projectFiltered: Boolean(metrics.projectId),
   });
   const workProfileId = metrics.workProfileId || "temporary-hire";
   const workProfile = getWorkProfileCopy(workProfileId, locale);
@@ -108,6 +111,8 @@ export function buildReceiptRecord(metrics, defaultTheme = "classic", locale = D
       version: sourceVersion,
       scope: metrics.mode,
       hours: metrics.windowHours || null,
+      range_kind: metrics.boundaryKind || null,
+      filter_kind: metrics.projectId ? "project" : null,
       collector_version: COLLECTOR_VERSION,
       logical_key: logicalKey,
       session_fingerprint: sessionFingerprint,

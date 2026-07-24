@@ -36,7 +36,7 @@ The cwr2 protocol creates stable privacy-safe facts for each session and calenda
 
 ## Quickstart
 
-Requires Node.js 20+ and local Codex session records. No clone is required. The first interactive run asks whether to save automatically or use manual-only mode. Manual mode then offers today, the last 3 hours, the last 7 days, this week, or a specific session:
+Requires Node.js 20+ and local Codex session records. No clone is required. The first interactive run asks whether to save automatically or use manual-only mode. Manual mode can generate by time range, a selected session, or a selected project:
 
 ```bash
 npx codex-work-receipt@latest --lang en
@@ -54,9 +54,19 @@ Summarize the last 3 hours:
 npx codex-work-receipt@latest --hours 3 --lang en
 ```
 
-“Last N hours” is a rolling summary for private history only. It does not participate in AI Work Cooperative deduplicated accounting. Use today, this week, the last seven days, or a specific session when you want accountable canonical facts.
+“Last N hours” is a rolling summary for private history only. It does not participate in AI Work Cooperative deduplicated accounting. Use today, this week, the last seven days, a specific session, or custom whole calendar dates when you want accountable canonical facts.
 
-HTML, structured data, and the WeChat import file are written to `./codex-work-receipt-output/` by default. The page can download its `.cwr.json` file and save a high-resolution PNG containing only the full receipt and WeChat mini-program code. A “More receipt features” section below the sponsor provides 12 copyable commands for receipt ranges, automatic mode, the Codex skill, and Ticket Buddy. The web controls stay out of the exported image. See the [CLI guide](docs/cli.en.md).
+Interactively choose a session, project, or custom range:
+
+```bash
+npx codex-work-receipt@latest --select-session --lang en
+npx codex-work-receipt@latest --select-project --lang en
+npx codex-work-receipt@latest --custom-range --lang en
+```
+
+Advanced use can pass `--project <directory>`, `--from <start>`, and `--to <end>` directly. Whole calendar-date ranges produce cwr2 canonical facts; exact date-time ranges are private cwr1 summaries.
+
+HTML, structured data, and the WeChat import file are written to `./codex-work-receipt-output/` by default. The page can download its `.cwr.json` file and save a high-resolution PNG containing only the full receipt and WeChat mini-program code. “More receipt features” provides 15 copyable commands organized into tabs for time ranges, sessions and projects, automation, and Ticket Buddy extensions. The web controls stay out of the exported image. See the [CLI guide](docs/cli.en.md).
 
 ## Automatic saving or manual only
 

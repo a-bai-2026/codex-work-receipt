@@ -9,8 +9,11 @@ AI Work Receipt reads Codex sessions, computes metrics, and renders receipts loc
 - `~/.codex/sessions/**/*.jsonl` by default
 - Event types, timestamps, model names, privacy-safe tool categories, and numerical metadata
 - Metrics such as turns, tool calls, Tokens, duration, interruptions, cache hit rate, latency percentiles, and hourly distribution
+- A session repository URL or working directory only when the user selects or specifies a project for local grouping
 
 Session logs are parsed locally in bounded chunks, one JSONL row at a time. Raw tool names are immediately mapped to stable categories. Prompts, responses, images, raw tool names, tool arguments, commands, and tool output are discarded from the in-memory statistics representation.
+
+Project filtering groups Git sessions by repository identity and non-Git sessions by working directory. The raw repository URL or path is immediately transformed with a random key that exists only on this computer. A project name appears only in the interactive terminal selector; HTML, full records, history, and WeChat import files do not store the original project name, repository URL, or path.
 
 ## What receipts exclude
 
@@ -22,6 +25,8 @@ Session logs are parsed locally in bounded chunks, one JSONL row at a time. Raw 
 ## Where data is saved
 
 Generated HTML, full JSON, and privacy-safe `.cwr.json` WeChat import files are written to `codex-work-receipt-output/` by default. Deduplicated history is stored under `~/.codex-work-receipt/`. Use `--output` and `--data-dir` to change these locations.
+
+The first project-filtered run creates a permission-restricted `project-identity.key` in the local data directory. It is used only to create project identities that cannot be correlated across installations.
 
 The runtime does not upload Codex session data to a project server. The initial or updated package download performed by `npx` is a normal package-manager network request and does not contain local session data.
 

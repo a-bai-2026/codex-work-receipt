@@ -132,6 +132,30 @@ test("微信导入文件拒绝错误格式、版本和协议", () => {
   assert.throws(() => decodeReceiptFile({ ...envelope, payload_schema: "cwr3" }), /不支持的小票数据协议/);
 });
 
+test("自定义区间在导入文件中区分 cwr2 自然日与 cwr1 精确时间", () => {
+  const calendar = buildReceiptRecord({
+    ...metrics,
+    mode: "custom-range",
+    boundaryKind: "calendar-days",
+    windowStartAt: new Date("2026-07-20T16:00:00.000Z"),
+    windowEndAt: new Date("2026-07-22T16:00:00.000Z"),
+    rangeStartDate: "2026-07-21",
+    rangeEndDate: "2026-07-22",
+  });
+  const exact = buildReceiptRecord({
+    ...metrics,
+    mode: "custom-range",
+    boundaryKind: "exact-time",
+    windowStartAt: new Date("2026-07-22T01:00:00.000Z"),
+    windowEndAt: new Date("2026-07-22T09:30:00.000Z"),
+  });
+
+  assert.equal(buildReceiptFileEnvelope(calendar).payload_schema, "cwr2");
+  assert.equal(buildReceiptFileEnvelope(calendar).payload.o, "custom-range");
+  assert.equal(buildReceiptFileEnvelope(exact).payload_schema, "cwr1");
+  assert.equal(buildReceiptFileEnvelope(exact).payload.o, "custom-range");
+});
+
 test("大量 canonical facts 仍输出一个文件，并自动关闭数据二维码", () => {
   const record = recordWithFacts(80);
   const transferFile = createReceiptFile(record);

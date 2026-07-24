@@ -7,6 +7,7 @@ import { formatDate, formatDuration, formatNumber, formatTime } from "../lib/tim
 import {
   buildCompensation,
   DEFAULT_LOCALE,
+  getCustomSummaryNotice,
   getReceiptCopy,
   getRollingSummaryNotice,
   getScopeLabel,
@@ -183,7 +184,7 @@ function renderInsights(record, copy, locale) {
 
 function renderFeatureCommands(featureCopy, locale) {
   const languageArgument = locale === "en" ? " --lang en" : "";
-  return featureCopy.groups.map((group) => {
+  const tabs = featureCopy.groups.map((group, groupIndex) => {
     const commands = group.commands.map((item) => {
       const command = `npx codex-work-receipt@latest ${item.args}${languageArgument}`;
       return `
@@ -198,13 +199,22 @@ function renderFeatureCommands(featureCopy, locale) {
             </div>
           </li>`;
     }).join("");
-    return `
-        <section class="feature-group">
-          <h4>${escapeHtml(group.title)}</h4>
+    const tabId = `feature-tab-${group.id}`;
+    const panelId = `feature-panel-${group.id}`;
+    return {
+      tab: `<button id="${tabId}" class="feature-tab" type="button" role="tab" aria-selected="${groupIndex === 0 ? "true" : "false"}" aria-controls="${panelId}" tabindex="${groupIndex === 0 ? "0" : "-1"}" data-feature-tab="${escapeHtml(group.id)}">${escapeHtml(group.title)}<span>${formatNumber(group.commands.length, locale)}</span></button>`,
+      panel: `
+        <section id="${panelId}" class="feature-panel" role="tabpanel" aria-labelledby="${tabId}" data-feature-panel="${escapeHtml(group.id)}">
           <ul>${commands}
           </ul>
-        </section>`;
-  }).join("");
+        </section>`,
+    };
+  });
+  return `
+        <div class="feature-tabs" data-feature-tabs>
+          <div class="feature-tabs__list" role="tablist" aria-label="${escapeHtml(featureCopy.tabAria)}">${tabs.map((item) => item.tab).join("")}</div>
+          <div class="feature-tabs__panels">${tabs.map((item) => item.panel).join("")}</div>
+        </div>`;
 }
 
 export function renderHtml({ record, dataQrDataUrl = null, miniProgramCodeDataUrl = null, transferFile = null }) {
@@ -218,11 +228,17 @@ export function renderHtml({ record, dataQrDataUrl = null, miniProgramCodeDataUr
   const displayDate = formatDate(endAt, timezone, locale);
   const rangeStartDate = record.period.range_start_date || formatDateKey(record.period.start_at.slice(0, 10), "zh-CN").replaceAll("/", "-");
   const rangeEndDate = record.period.range_end_date || formatDateKey(record.period.end_at.slice(0, 10), "zh-CN").replaceAll("/", "-");
-  const isCalendarScope = new Set(["today", "last-7-days", "this-week"]).has(record.source.scope);
+  const isCalendarScope = new Set(["today", "last-7-days", "this-week"]).has(record.source.scope)
+    || (record.source.scope === "custom-range" && record.source.range_kind === "calendar-days");
   const spansMultipleDates = rangeStartDate !== rangeEndDate;
-  const scopeLabel = getScopeLabel(record.source.scope, locale, record.source.hours);
+  const scopeLabel = getScopeLabel(record.source.scope, locale, record.source.hours, {
+    rangeKind: record.source.range_kind,
+    filterKind: record.source.filter_kind,
+  });
   const rollingSummaryNotice = record.source.scope === "last-hours"
     ? getRollingSummaryNotice(locale, record.source.hours)
+    : record.source.scope === "custom-range" && record.source.range_kind === "exact-time"
+      ? getCustomSummaryNotice(locale)
     : null;
   const dateRange = spansMultipleDates
     ? `${formatDateKey(rangeStartDate, locale)}—${formatDateKey(rangeEndDate, locale)}`
@@ -542,29 +558,81 @@ export function renderHtml({ record, dataQrDataUrl = null, miniProgramCodeDataUr
       margin: 10px 0 12px;
       color: var(--feature-muted);
     }
-    .feature-group + .feature-group {
+    .feature-tabs__list {
+      display: flex;
+      gap: 5px;
+      margin: 0 -2px 12px;
+      padding: 2px;
+      overflow-x: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #b8b0a4 transparent;
+    }
+    .feature-tab {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      min-height: 34px;
+      padding: 7px 10px;
+      flex: 0 0 auto;
+      border: 1px solid var(--feature-line);
+      border-radius: 5px;
+      background: var(--feature-command);
+      color: var(--feature-muted);
+      cursor: pointer;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+    .feature-tab span {
+      min-width: 17px;
+      padding: 1px 4px;
+      border-radius: 999px;
+      background: rgba(40, 38, 32, .08);
+      font-size: 8px;
+      text-align: center;
+    }
+    .feature-tab[aria-selected="true"] {
+      border-color: var(--feature-ink);
+      background: var(--feature-ink);
+      color: #fff;
+    }
+    .feature-tab[aria-selected="true"] span { background: rgba(255, 255, 255, .18); }
+    .feature-tab:focus-visible {
+      outline: 2px solid #81786c;
+      outline-offset: 2px;
+    }
+    .feature-tabs[data-ready="true"] .feature-panel[hidden] { display: none; }
+    .feature-panel + .feature-panel {
       margin-top: 14px;
       padding-top: 13px;
       border-top: 1px solid var(--feature-soft-line);
     }
-    .feature-group h4 {
-      margin: 0 0 8px;
-      color: var(--feature-muted);
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: .08em;
-      text-transform: uppercase;
+    .feature-tabs[data-ready="true"] .feature-panel + .feature-panel {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: 0;
     }
-    .feature-group ul {
+    .feature-panel ul {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: 12px;
       margin: 0;
       padding: 0;
       list-style: none;
     }
-    .feature-command + .feature-command {
+    .feature-command {
+      min-width: 0;
       margin-top: 10px;
       padding-top: 10px;
       border-top: 1px dashed var(--feature-soft-line);
+    }
+    .feature-command:nth-child(-n + 2) {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: 0;
     }
     .feature-command__name {
       display: block;
@@ -653,8 +721,8 @@ export function renderHtml({ record, dataQrDataUrl = null, miniProgramCodeDataUr
     }
     @media (min-width: 1021px) {
       .sidebar-features[open] {
-        width: 300px;
-        margin-left: -120px;
+        width: 560px;
+        margin-left: -380px;
       }
     }
     @media (prefers-reduced-motion: reduce) {
@@ -1133,6 +1201,12 @@ export function renderHtml({ record, dataQrDataUrl = null, miniProgramCodeDataUr
       .structure-grid { grid-template-columns: 1fr; }
       .sidebar { flex-direction: column; }
       .sidebar-card { flex-basis: auto; }
+      .feature-panel ul { grid-template-columns: 1fr; }
+      .feature-command:nth-child(2) {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px dashed var(--feature-soft-line);
+      }
     }
   </style>
 </head>
@@ -1274,6 +1348,44 @@ export function renderHtml({ record, dataQrDataUrl = null, miniProgramCodeDataUr
       } catch {}
       featureDetails.addEventListener("toggle", () => {
         try { localStorage.setItem("codex-work-receipt-features-open", String(featureDetails.open)); } catch {}
+      });
+    }
+
+    const featureTabs = document.querySelector("[data-feature-tabs]");
+    if (featureTabs) {
+      const tabs = [...featureTabs.querySelectorAll("[data-feature-tab]")];
+      const panels = [...featureTabs.querySelectorAll("[data-feature-panel]")];
+      const availableTabs = new Set(tabs.map((tab) => tab.dataset.featureTab));
+      function activateFeatureTab(value, { focus = false } = {}) {
+        const selected = availableTabs.has(value) ? value : tabs[0]?.dataset.featureTab;
+        tabs.forEach((tab) => {
+          const active = tab.dataset.featureTab === selected;
+          tab.setAttribute("aria-selected", String(active));
+          tab.tabIndex = active ? 0 : -1;
+          if (active && focus) {
+            tab.focus();
+            tab.scrollIntoView({ block: "nearest", inline: "nearest" });
+          }
+        });
+        panels.forEach((panel) => { panel.hidden = panel.dataset.featurePanel !== selected; });
+        try { localStorage.setItem("codex-work-receipt-feature-tab", selected); } catch {}
+      }
+      let savedFeatureTab = null;
+      try { savedFeatureTab = localStorage.getItem("codex-work-receipt-feature-tab"); } catch {}
+      featureTabs.dataset.ready = "true";
+      activateFeatureTab(savedFeatureTab || tabs[0]?.dataset.featureTab);
+      tabs.forEach((tab, index) => {
+        tab.addEventListener("click", () => activateFeatureTab(tab.dataset.featureTab));
+        tab.addEventListener("keydown", (event) => {
+          let nextIndex = null;
+          if (event.key === "ArrowRight") nextIndex = (index + 1) % tabs.length;
+          if (event.key === "ArrowLeft") nextIndex = (index - 1 + tabs.length) % tabs.length;
+          if (event.key === "Home") nextIndex = 0;
+          if (event.key === "End") nextIndex = tabs.length - 1;
+          if (nextIndex === null) return;
+          event.preventDefault();
+          activateFeatureTab(tabs[nextIndex].dataset.featureTab, { focus: true });
+        });
       });
     }
 

@@ -7,7 +7,7 @@ import {
   METRIC_SCHEMA_VERSION,
 } from "./fact-identity.mjs";
 import { dateKey, rowDate } from "../lib/time.mjs";
-import { isCalendarScope, isDateInRange, shiftDateKey } from "./range.mjs";
+import { isCalendarRange, isDateInRange, shiftDateKey } from "./range.mjs";
 
 const TOKEN_KEYS = [
   "input_tokens",
@@ -112,7 +112,7 @@ function metricsForRows(sessionRows, bucketRows, localDate, timezone) {
 }
 
 function coverageForRange(range, scanMode, observedAt) {
-  if (!isCalendarScope(range.scope)) {
+  if (!isCalendarRange(range)) {
     return {
       kind: "selected_sessions",
       scan_mode: "none",
@@ -151,7 +151,7 @@ export function buildCanonicalFacts(sessions, range, options = {}) {
 
     for (const row of sessionRows) {
       const date = rowDate(row);
-      if (!date || (isCalendarScope(range.scope) && !isDateInRange(date, range))) continue;
+      if (!date || (isCalendarRange(range) && !isDateInRange(date, range))) continue;
       const localDate = dateKey(date, accountingTimezone);
       const rows = buckets.get(localDate) || [];
       rows.push(row);

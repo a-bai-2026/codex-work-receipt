@@ -116,11 +116,21 @@ test("英文 HTML 会完整本地化主要小票内容", () => {
   assert.equal((html.match(/target="_blank" rel="noopener noreferrer"/g) || []).length, 3);
   assert.match(html, /<details class="sidebar-card sidebar-features" data-feature-details>/);
   assert.match(html, /More receipt features/);
-  assert.match(html, /12 commands/);
+  assert.match(html, /15 commands/);
+  assert.match(html, /role="tablist" aria-label="Receipt feature categories"/);
+  assert.equal((html.match(/role="tab"/g) || []).length, 4);
+  assert.equal((html.match(/role="tabpanel"/g) || []).length, 4);
+  assert.match(html, /Time ranges/);
+  assert.match(html, /Sessions and projects/);
+  assert.match(html, /Choose a custom range/);
+  assert.match(html, /--select-session --lang en/);
+  assert.match(html, /--select-project --lang en/);
   assert.match(html, /Generate the last 3 hours/);
   assert.match(html, /npx codex-work-receipt@latest --hours 3 --lang en/);
   assert.match(html, /npx codex-work-receipt@latest --install-companion --lang en/);
-  assert.equal((html.match(/data-copy-command=/g) || []).length, 12);
+  assert.equal((html.match(/data-copy-command=/g) || []).length, 15);
+  assert.match(html, /codex-work-receipt-feature-tab/);
+  assert.match(html, /ArrowRight/);
   assert.match(html, /navigator\.clipboard\?\.writeText/);
   assert.match(html, /document\.execCommand\("copy"\)/);
   const featureStyleStart = html.indexOf(".sidebar-features {");
@@ -178,7 +188,10 @@ test("中文 HTML 展示对应的 GitHub Star 引导", () => {
   assert.match(html, /更新日志/);
   assert.match(html, /赞助伙伴/);
   assert.match(html, /更多小票功能/);
-  assert.match(html, /12 项/);
+  assert.match(html, /15 项/);
+  assert.match(html, /时间范围/);
+  assert.match(html, /会话与项目/);
+  assert.match(html, /自定义时间区间/);
   assert.match(html, /生成最近 3 小时小票/);
   assert.match(html, /npx codex-work-receipt@latest --hours 3/);
   assert.doesNotMatch(html, /--hours 3 --lang en/);
@@ -252,4 +265,22 @@ test("滚动小时范围展示请求窗口和动态小时文案", () => {
   assert.match(html, /WINDOW PAY/);
   assert.match(html, /rolling summary for private history only/);
   assert.match(html, /does not participate in AI Work Cooperative accounting/);
+});
+
+test("自定义时间和项目筛选在 HTML 中使用隐私安全标签", () => {
+  const record = buildReceiptRecord({
+    ...metrics,
+    mode: "custom-range",
+    boundaryKind: "exact-time",
+    projectId: "cwp_private",
+    windowStartAt: new Date("2026-07-18T01:00:00.000Z"),
+    windowEndAt: new Date("2026-07-18T09:30:00.000Z"),
+  }, "classic", "zh-CN");
+  const html = renderHtml({ record });
+
+  assert.match(html, /指定项目 · 自定义时间/);
+  assert.match(html, /营业时段: 09:00—17:30/);
+  assert.match(html, /区间工资/);
+  assert.match(html, /精确时间区间属于私人摘要/);
+  assert.doesNotMatch(html, /project_path|repository_url|"cwd"/);
 });

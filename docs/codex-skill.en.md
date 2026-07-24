@@ -38,7 +38,7 @@ After installation, ask Codex:
 
 > Create a Chinese receipt for my latest session.
 
-Codex will choose a specific session, the last 1-168 hours, today, the last seven days, or this week, plus the language and theme, then run the CLI and open the generated page. “The last few hours” defaults to three hours.
+Codex will choose a specific session, the current or selected project, a custom date/time range, the last 1-168 hours, today, the last seven days, or this week, plus the language and theme, then run the CLI and open the generated page. “The last few hours” defaults to three hours.
 
 If another Codex task is still running and you want the receipt immediately, start a separate local Codex chat. A message sent to the active chat may steer the current run or wait in its queue, depending on Follow-up behavior.
 

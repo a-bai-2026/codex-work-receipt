@@ -2,9 +2,9 @@ import { dateKey, rowDate } from "../lib/time.mjs";
 import { toolCategoryForRow } from "../lib/tool-category.mjs";
 import {
   calendarDayCount,
-  isCalendarScope,
+  isCalendarRange,
   isDateInRange,
-  isTimeWindowScope,
+  isTimeWindowRange,
 } from "./range.mjs";
 import { selectWorkProfileId } from "./presentation.mjs";
 
@@ -111,7 +111,7 @@ function sessionTokenUsage(rows, range) {
   for (const row of events) {
     const currentUsage = row.payload.info.total_token_usage;
     const date = rowDate(row);
-    const selected = (!isCalendarScope(range.scope) && !isTimeWindowScope(range.scope))
+    const selected = (!isCalendarRange(range) && !isTimeWindowRange(range))
       || isDateInRange(date, range);
 
     for (const key of Object.keys(totals)) {
@@ -141,6 +141,7 @@ function calculateWorkPoints(metrics) {
 
 function emptyRangeMessage(range) {
   if (range.scope === "last-hours") return `最近 ${range.hours} 小时没有找到 Codex 活动`;
+  if (range.scope === "custom-range") return "自定义时间区间内没有找到 Codex 活动";
   if (range.scope === "today") return `没有找到 ${range.targetDate} 的 Codex 活动`;
   if (range.scope === "last-7-days") return `没有找到 ${range.startDate} 至 ${range.endDate} 的 Codex 活动`;
   if (range.scope === "this-week") return `本周暂时没有找到 Codex 活动`;
@@ -169,7 +170,7 @@ export function collectMetrics(sessions, range) {
   const activityByHour = Array(24).fill(0);
 
   for (const session of sessions) {
-    const scopedRows = isCalendarScope(range.scope) || isTimeWindowScope(range.scope)
+    const scopedRows = isCalendarRange(range) || isTimeWindowRange(range)
       ? session.rows.filter((row) => isDateInRange(rowDate(row), range))
       : session.rows;
 
@@ -183,7 +184,7 @@ export function collectMetrics(sessions, range) {
     let sessionHasSelectedModel = false;
     for (const row of session.rows) {
       if (row.type === "turn_context" && row.payload?.model) activeModel = row.payload.model;
-      const selected = (!isCalendarScope(range.scope) && !isTimeWindowScope(range.scope))
+      const selected = (!isCalendarRange(range) && !isTimeWindowRange(range))
         || isDateInRange(rowDate(row), range);
       if (!selected) continue;
       const date = rowDate(row);
@@ -258,7 +259,9 @@ export function collectMetrics(sessions, range) {
     windowStartAt: range.startAt,
     windowEndAt: range.endAt,
     windowHours: range.hours,
-    calendarDayCount: isCalendarScope(range.scope) ? calendarDayCount(range) : 1,
+    boundaryKind: range.boundaryKind,
+    projectId: range.projectId,
+    calendarDayCount: isCalendarRange(range) ? calendarDayCount(range) : 1,
     activeDayCount: Math.max(1, activeDateKeys.size),
     sessionIds,
     sessionCount: scopedSessions.length,

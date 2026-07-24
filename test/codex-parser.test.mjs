@@ -8,7 +8,11 @@ import test from "node:test";
 import { buildCanonicalFacts } from "../src/core/fact-buckets.mjs";
 import { collectMetrics } from "../src/core/metrics.mjs";
 import { resolveRange } from "../src/core/range.mjs";
-import { deduplicateCodexSessions, loadCodexSessions } from "../src/parsers/codex.mjs";
+import {
+  deduplicateCodexSessions,
+  listRecentCodexProjects,
+  loadCodexSessions,
+} from "../src/parsers/codex.mjs";
 
 function session(overrides = {}) {
   return {
@@ -101,6 +105,59 @@ test("来源修订不可比较时使用最近修改时间稳定决胜", () => {
 
   assert.equal(result.length, 1);
   assert.equal(result[0], moreBytes);
+});
+
+test("项目列表按匿名仓库身份归组且不会保留原始路径", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "codex-work-receipt-project-parser-"));
+  const codexHome = path.join(tempDir, ".codex");
+  const sessionsDir = path.join(codexHome, "sessions");
+  fs.mkdirSync(sessionsDir, { recursive: true });
+  const secret = Buffer.alloc(32, 3);
+  const repositoryUrl = "https://github.com/example/private-project.git";
+
+  for (let index = 0; index < 2; index += 1) {
+    const rows = [
+      {
+        timestamp: `2026-07-2${index}T01:00:00.000Z`,
+        type: "session_meta",
+        payload: {
+          id: `project-session-${index}`,
+          cwd: `/private/worktree-${index}`,
+          git: { repository_url: repositoryUrl },
+        },
+      },
+      {
+        timestamp: `2026-07-2${index}T01:05:00.000Z`,
+        type: "event_msg",
+        payload: { type: "task_complete", duration_ms: 1000 },
+      },
+    ];
+    fs.writeFileSync(
+      path.join(sessionsDir, `rollout-project-${index}.jsonl`),
+      `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`,
+      "utf8",
+    );
+  }
+
+  const projects = listRecentCodexProjects(10, { codexHome, projectSecret: secret });
+
+  assert.equal(projects.length, 1);
+  assert.equal(projects[0].sessionCount, 2);
+  assert.equal(projects[0].projectLabel, "private-project");
+  assert.doesNotMatch(JSON.stringify(projects), /private\/worktree|github\.com/);
+
+  const range = resolveRange(
+    "last-7-days",
+    "UTC",
+    new Date("2026-07-21T12:00:00.000Z"),
+    null,
+    null,
+    null,
+    projects[0].projectId,
+  );
+  const selected = loadCodexSessions(range, { codexHome, projectSecret: secret });
+  assert.equal(selected.length, 2);
+  assert.equal(selected.every((item) => item.projectId === projects[0].projectId), true);
 });
 
 test("大型会话逐块读取并在内存中丢弃提示词与工具输出", () => {

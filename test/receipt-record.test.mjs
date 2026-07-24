@@ -116,6 +116,50 @@ test("滚动小时范围使用兼容摘要协议且不生成自然日事实", ()
   assert.equal("facts" in record, false);
 });
 
+test("自定义自然日使用 cwr2，精确时间使用私人 cwr1 摘要", () => {
+  const calendar = buildReceiptRecord({
+    ...metrics,
+    mode: "custom-range",
+    boundaryKind: "calendar-days",
+    rangeStartDate: "2026-07-01",
+    rangeEndDate: "2026-07-07",
+    windowStartAt: new Date("2026-06-30T16:00:00.000Z"),
+    windowEndAt: new Date("2026-07-07T16:00:00.000Z"),
+  });
+  const exact = buildReceiptRecord({
+    ...metrics,
+    mode: "custom-range",
+    boundaryKind: "exact-time",
+    rangeStartDate: "2026-07-17",
+    rangeEndDate: "2026-07-17",
+    windowStartAt: new Date("2026-07-17T01:00:00.000Z"),
+    windowEndAt: new Date("2026-07-17T09:00:00.000Z"),
+  });
+
+  assert.equal(calendar.schema_version, 2);
+  assert.equal(calendar.source.range_kind, "calendar-days");
+  assert.equal("manifest" in calendar, true);
+  assert.equal(exact.schema_version, 1);
+  assert.equal(exact.source.range_kind, "exact-time");
+  assert.equal("manifest" in exact, false);
+});
+
+test("项目筛选进入匿名逻辑键并区分同一天的不同项目", () => {
+  const projectA = buildReceiptRecord({ ...metrics, mode: "today", projectId: "cwp_a" });
+  const updatedA = buildReceiptRecord({
+    ...metrics,
+    mode: "today",
+    projectId: "cwp_a",
+    endAt: new Date("2026-07-16T17:00:00.000Z"),
+  });
+  const projectB = buildReceiptRecord({ ...metrics, mode: "today", projectId: "cwp_b" });
+
+  assert.equal(projectA.source.filter_kind, "project");
+  assert.equal(projectA.id, updatedA.id);
+  assert.notEqual(projectA.id, projectB.id);
+  assert.doesNotMatch(JSON.stringify(projectA), /project_path|repository_url|cwd/);
+});
+
 test("无扩展名输出不会被结构 JSON 覆盖", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "codex-work-receipt-"));
   const outputPath = path.join(tempDir, "receipt");

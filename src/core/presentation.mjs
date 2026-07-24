@@ -102,18 +102,30 @@ const RECEIPT_COPY = {
         copyErrorLabel: "复制失败",
         copiedStatus: "命令已复制到剪贴板",
         copyErrorStatus: "无法自动复制，请手动选择命令",
+        tabAria: "小票功能分类",
         groups: [
           {
-            title: "生成小票",
+            id: "time",
+            title: "时间范围",
             commands: [
               { label: "生成最近一次小票", args: "--latest" },
               { label: "生成最近 3 小时小票", args: "--hours 3" },
               { label: "生成今日小票", args: "--today" },
               { label: "生成最近 7 天小票", args: "--range last-7-days" },
               { label: "生成本周小票", args: "--range this-week" },
+              { label: "自定义时间区间", args: "--custom-range" },
             ],
           },
           {
+            id: "selection",
+            title: "会话与项目",
+            commands: [
+              { label: "选择指定会话", args: "--select-session" },
+              { label: "选择指定项目", args: "--select-project" },
+            ],
+          },
+          {
+            id: "automation",
             title: "自动与手动",
             commands: [
               { label: "重新选择工作模式", args: "--setup" },
@@ -123,6 +135,7 @@ const RECEIPT_COPY = {
             ],
           },
           {
+            id: "companion",
             title: "票仔与对话开票",
             commands: [
               { label: "安装票仔和对话开票", args: "--install-companion" },
@@ -142,6 +155,9 @@ const RECEIPT_COPY = {
       latest: "最近一次会话",
       session: "指定会话",
       "last-hours": "最近 {hours} 小时",
+      "custom-range-calendar-days": "自定义日期",
+      "custom-range-exact-time": "自定义时间",
+      "custom-range": "自定义区间",
       today: "今日全部会话",
       "last-7-days": "最近 7 个自然日",
       "this-week": "本周全部会话",
@@ -235,6 +251,8 @@ const RECEIPT_COPY = {
     placeholderAria: "小程序码待接入",
     transferNote: "导入文件和可选数据码只包含时间、轮次、Token 和工具调用等统计，不包含 Prompt、回复正文、代码、项目路径或文件名。",
     rollingSummaryNotice: "最近 {hours} 小时属于滚动摘要，只保存到私人历史，不参与 AI 供销社统计。需要统计时请生成“今日 / 本周 / 近 7 日 / 指定会话”小票。",
+    customSummaryNotice: "精确时间区间属于私人摘要，不参与 AI 供销社统计。按自然日选择自定义区间时可以生成可去重的规范事实。",
+    projectScopeTemplate: "指定项目 · {scope}",
     privacy: "结构数据和微信导入文件同时保存在本机；只有你主动发送文件或扫码时，脱敏统计才会离开电脑。",
   },
   en: {
@@ -264,18 +282,30 @@ const RECEIPT_COPY = {
         copyErrorLabel: "Copy failed",
         copiedStatus: "Command copied to the clipboard",
         copyErrorStatus: "Could not copy automatically. Select the command manually.",
+        tabAria: "Receipt feature categories",
         groups: [
           {
-            title: "Generate receipts",
+            id: "time",
+            title: "Time ranges",
             commands: [
               { label: "Generate the latest receipt", args: "--latest" },
               { label: "Generate the last 3 hours", args: "--hours 3" },
               { label: "Generate today's receipt", args: "--today" },
               { label: "Generate the last 7 days", args: "--range last-7-days" },
               { label: "Generate this week's receipt", args: "--range this-week" },
+              { label: "Choose a custom range", args: "--custom-range" },
             ],
           },
           {
+            id: "selection",
+            title: "Sessions and projects",
+            commands: [
+              { label: "Choose a specific session", args: "--select-session" },
+              { label: "Choose a specific project", args: "--select-project" },
+            ],
+          },
+          {
+            id: "automation",
             title: "Automatic and manual",
             commands: [
               { label: "Choose a working mode", args: "--setup" },
@@ -285,6 +315,7 @@ const RECEIPT_COPY = {
             ],
           },
           {
+            id: "companion",
             title: "Ticket Buddy and chat commands",
             commands: [
               { label: "Install Ticket Buddy and chat commands", args: "--install-companion" },
@@ -304,6 +335,9 @@ const RECEIPT_COPY = {
       latest: "Latest session",
       session: "Selected session",
       "last-hours": "Last {hours} hours",
+      "custom-range-calendar-days": "Custom dates",
+      "custom-range-exact-time": "Custom time range",
+      "custom-range": "Custom range",
       today: "All sessions today",
       "last-7-days": "Last 7 calendar days",
       "this-week": "All sessions this week",
@@ -397,6 +431,8 @@ const RECEIPT_COPY = {
     placeholderAria: "Mini-program code pending",
     transferNote: "The import file and optional data code contain only statistics such as time, turns, Tokens, and tool calls. They do not contain prompts, responses, code, project paths, or file names.",
     rollingSummaryNotice: "The last {hours} hours is a rolling summary for private history only. It does not participate in AI Work Cooperative accounting. Use today, this week, the last seven days, or a specific session for accountable facts.",
+    customSummaryNotice: "An exact time range is a private summary and does not participate in AI Work Cooperative accounting. Choose whole calendar dates to create deduplicated canonical facts.",
+    projectScopeTemplate: "Selected project · {scope}",
     privacy: "Structured data and the WeChat import file stay on this computer until you explicitly send the file or scan its data code.",
   },
 };
@@ -406,6 +442,7 @@ const COMPENSATION_COPY = {
     latest: "本单工资",
     session: "本单工资",
     "last-hours": "本段工资",
+    "custom-range": "区间工资",
     today: "本日工资",
     "last-7-days": "近七日工资",
     "this-week": "本周工资",
@@ -416,6 +453,7 @@ const COMPENSATION_COPY = {
     latest: "SHIFT PAY",
     session: "SHIFT PAY",
     "last-hours": "WINDOW PAY",
+    "custom-range": "RANGE PAY",
     today: "TODAY'S PAY",
     "last-7-days": "7-DAY PAY",
     "this-week": "THIS WEEK'S PAY",
@@ -444,13 +482,24 @@ export function getReceiptCopy(locale = DEFAULT_LOCALE) {
   return RECEIPT_COPY[SUPPORTED_LOCALES.has(locale) ? locale : DEFAULT_LOCALE];
 }
 
-export function getScopeLabel(scope, locale = DEFAULT_LOCALE, hours = null) {
-  const template = getReceiptCopy(locale).scope[scope] || getReceiptCopy(locale).scope.latest;
-  return String(template).replaceAll("{hours}", String(hours || 3));
+export function getScopeLabel(scope, locale = DEFAULT_LOCALE, hours = null, options = {}) {
+  const copy = getReceiptCopy(locale);
+  const scopeKey = scope === "custom-range" && options.rangeKind
+    ? `custom-range-${options.rangeKind}`
+    : scope;
+  const template = copy.scope[scopeKey] || copy.scope[scope] || copy.scope.latest;
+  const label = String(template).replaceAll("{hours}", String(hours || 3));
+  return options.filterKind === "project"
+    ? String(copy.projectScopeTemplate).replaceAll("{scope}", label)
+    : label;
 }
 
 export function getRollingSummaryNotice(locale = DEFAULT_LOCALE, hours = null) {
   return String(getReceiptCopy(locale).rollingSummaryNotice).replaceAll("{hours}", String(hours || 3));
+}
+
+export function getCustomSummaryNotice(locale = DEFAULT_LOCALE) {
+  return getReceiptCopy(locale).customSummaryNotice;
 }
 
 export function buildCompensation(scope, amount, locale = DEFAULT_LOCALE) {
