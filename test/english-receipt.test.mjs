@@ -64,15 +64,16 @@ test("工种规则先生成语义 ID，再分别映射中英文文案", () => {
   assert.equal(getWorkProfileCopy(profileId, "en").title, "Toolchain Commander");
 });
 
-test("英文 HTML 会完整本地化主要小票内容", () => {
+test("英文 HTML 会完整本地化 V6 回执所与原版小票内容", () => {
   const record = buildReceiptRecord(metrics, "payroll", "en");
+  record.generated_at = "2026-07-18T01:30:00.000Z";
   const html = renderHtml({
     record,
     dataQrDataUrl: "data:image/png;base64,DATA",
     miniProgramCodeDataUrl: "data:image/png;base64,MINI",
   });
 
-  assert.match(html, /<html lang="en"/);
+  assert.match(html, /<html lang="en" data-theme="payroll" data-scene="day">/);
   assert.match(html, /AI Work Receipt/);
   assert.match(html, /Latest session/);
   assert.match(html, /Toolchain Commander/);
@@ -103,19 +104,39 @@ test("英文 HTML 会完整本地化主要小票内容", () => {
   assert.doesNotMatch(html, /multipart|Data part|rotate automatically/i);
   assert.match(html, /Structured data and the WeChat import file stay on this computer/);
   assert.match(html, /Save full PNG/);
-  assert.match(html, /Enjoying it\? Star on GitHub ⭐/);
+
+  assert.match(html, /WORLD&#039;S EDGE · AI RECEIPT OFFICE · Day Shift/);
+  assert.match(html, /AI RECEIPT OFFICE · Day Shift ON DUTY/);
+  assert.match(html, /2026-07-18 · 09:30 · Received by Ticket Buddy/);
+  assert.match(html, /Today&#039;s receipt/);
+  assert.match(html, /has arrived/);
+  assert.match(html, /Today&#039;s Receipt Pack/);
+  assert.match(html, /Work Receipt/);
+  assert.match(html, /Mood Receipt/);
+  assert.match(html, /Badges/);
+  assert.match(html, /Ticket House/);
+  assert.match(html, /Badge Wall/);
+  assert.match(html, /Planned/);
+  assert.equal((html.match(/data-scene-mode=/g) || []).length, 3);
+  assert.match(html, /data-scene-mode="auto" aria-pressed="true"/);
+  assert.match(html, /id="commandDrawerToggle"/);
+  assert.match(html, /id="printerCommandToggle"/);
+  assert.match(html, /id="windToggle"/);
+  assert.match(html, /data:image\/png;base64,[A-Za-z0-9+/=]+" alt="Ticket Buddy on duty/);
+
+  assert.match(html, /class="office-info-cluster"/);
+  assert.match(html, /See what changed at the Receipt Office →/);
+  assert.match(html, /Light a star for the Receipt Office on GitHub ★/);
   assert.equal(html.split(OPEN_SOURCE_REPOSITORY_URL).length - 1, 2);
-  assert.match(html, /class="github-star-link"[^>]+target="_blank"[^>]+rel="noopener noreferrer"/);
-  assert.match(html, /<div class="layout">/);
-  assert.match(html, /<aside class="sidebar" aria-label="Related information">/);
-  assert.match(html, /Support the project/);
-  assert.match(html, /View the changelog →/);
-  assert.match(html, new RegExp(`${OPEN_SOURCE_REPOSITORY_URL}/blob/main/CHANGELOG\\.md`));
+  assert.match(html, /class="github-board github-star-link"[^>]+target="_blank" rel="noopener noreferrer"/);
+  assert.match(html, new RegExp(OPEN_SOURCE_REPOSITORY_URL + "/blob/main/CHANGELOG\\.md"));
   assert.match(html, /href="https:\/\/modelflare\.dev\/sign-up\?partner=OB9YXNSEEGOL"/);
   assert.match(html, /<img src="data:image\/png;base64,[A-Za-z0-9+/=]+" alt="ModelFlare logo"/);
+  assert.match(html, /Unlock 0\.015x GPT exclusive group/);
   assert.equal((html.match(/target="_blank" rel="noopener noreferrer"/g) || []).length, 3);
-  assert.match(html, /<details class="sidebar-card sidebar-features" data-feature-details>/);
-  assert.match(html, /More receipt features/);
+
+  assert.match(html, /<details class="feature-dock" id="commandDrawer" data-feature-details>/);
+  assert.match(html, /More CLI features/);
   assert.match(html, /15 commands/);
   assert.match(html, /role="tablist" aria-label="Receipt feature categories"/);
   assert.equal((html.match(/role="tab"/g) || []).length, 4);
@@ -125,7 +146,6 @@ test("英文 HTML 会完整本地化主要小票内容", () => {
   assert.match(html, /Choose a custom range/);
   assert.match(html, /--select-session --lang en/);
   assert.match(html, /--select-project --lang en/);
-  assert.match(html, /Generate the last 3 hours/);
   assert.match(html, /npx codex-work-receipt@latest --hours 3 --lang en/);
   assert.match(html, /npx codex-work-receipt@latest --install-companion --lang en/);
   assert.equal((html.match(/data-copy-command=/g) || []).length, 15);
@@ -133,42 +153,34 @@ test("英文 HTML 会完整本地化主要小票内容", () => {
   assert.match(html, /ArrowRight/);
   assert.match(html, /navigator\.clipboard\?\.writeText/);
   assert.match(html, /document\.execCommand\("copy"\)/);
-  const featureStyleStart = html.indexOf(".sidebar-features {");
-  const featureStyleEnd = html.indexOf(".toolbar {", featureStyleStart);
-  const featureStyles = html.slice(featureStyleStart, featureStyleEnd);
-  assert.match(featureStyles, /--feature-paper: #f6f2e9/);
-  assert.match(featureStyles, /background: var\(--feature-paper\)/);
-  assert.match(featureStyles, /background: var\(--feature-command\)/);
-  assert.match(featureStyles, /background: #fff/);
-  assert.doesNotMatch(featureStyles, /background: #(?:101010|1a1a1a|282828|333)\b/);
-  assert.match(featureStyles, /@media \(min-width: 1120px\)[\s\S]*?\.sidebar \{[\s\S]*?align-items: center/);
-  assert.match(featureStyles, /width: clamp\(360px, calc\(100vw - 880px\), 560px\)/);
-  assert.doesNotMatch(featureStyles, /margin-left: -380px/);
   assert.doesNotMatch(html, /raw\.githubusercontent\.com/);
+
+  assert.match(html, /class="ticket-rail"/);
+  assert.match(html, /class="receipt-toolbar toolbar"/);
+  assert.match(html, /\.ticket-rail \{[\s\S]*?position: fixed;[\s\S]*?overflow-y: auto;/);
+  assert.match(html, /\.receipt-toolbar \{[\s\S]*?position: sticky;[\s\S]*?top: 0;/);
+  assert.match(html, /body \{[\s\S]*?height: 100dvh;[\s\S]*?overscroll-behavior: none;/);
+  assert.match(html, /html\[data-scene="day"\] body/);
+  assert.match(html, /html\[data-scene="day"\] \.today-package/);
+  assert.match(html, /\.feature-dock:not\(\[open\]\)[\s\S]*?visibility: hidden/);
+  assert.match(html, /document\.addEventListener\("wheel"[\s\S]*?ticketRail\.scrollBy/);
+  assert.match(html, /applySceneMode\("auto"\)/);
+  assert.match(html, /officeConfig\.generatedScene/);
+
   assert.match(html, /id="save-receipt-image"/);
-  assert.match(html, /\.theme-button:first-child/);
-  assert.match(html, /\.theme-button:last-child/);
-  assert.match(html, /buttons\.forEach\(\(button\) => button\.setAttribute\("aria-pressed"/);
-  assert.match(html, /@media \(max-width: 1119px\)[\s\S]*?\.sidebar \{[\s\S]*?position: static/);
-  assert.match(html, /@media \(max-width: 1119px\)[\s\S]*?\.feature-tabs__list \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
-  assert.match(html, /@media \(max-width: 1119px\)[\s\S]*?\.feature-tab \{[\s\S]*?white-space: normal/);
-  assert.match(html, /@media \(max-width: 560px\)[\s\S]*?\.feature-panel ul \{ grid-template-columns: 1fr; \}/);
-  assert.match(html, /@media \(max-width: 420px\)[\s\S]*?\.toolbar \{[\s\S]*?flex-direction: column/);
   assert.match(html, /domtoimage\.toPng/);
   assert.match(html, /data-barcode-value="[A-Z0-9]+-008"/);
   assert.match(html, /barcode-segment--bar/);
   assert.match(html, /barcode-segment--space/);
   assert.match(html, /style="flex-grow:[1-4]"/);
-  assert.doesNotMatch(html, /background: repeating-linear-gradient\(90deg/);
-
   const exportStart = html.indexOf('<div class="export-sheet" id="receipt-export">');
   const exportEnd = html.indexOf('<p class="privacy">', exportStart);
   const exportMarkup = html.slice(exportStart, exportEnd);
   assert.match(exportMarkup, /paper receipt/);
   assert.match(exportMarkup, /paper transfer-stub/);
   assert.doesNotMatch(exportMarkup, /theme-switcher|save-receipt-image|class="privacy"/);
-  assert.doesNotMatch(exportMarkup, /github-star-link|Star on GitHub|sidebar|Changelog|ModelFlare/);
-  assert.doesNotMatch(exportMarkup, /More receipt features|data-copy-command/);
+  assert.doesNotMatch(exportMarkup, /github-star-link|GitHub|Changelog|ModelFlare/);
+  assert.doesNotMatch(exportMarkup, /More CLI features|data-copy-command|today-package|data-planned-message/);
   assert.match(html, /function sanitizeExportNode/);
   assert.match(html, /function normalizeExportTextLayout/);
   assert.match(html, /\.meta > div, \.receipt-row > span, \.receipt-row > strong, \.salary-line > span, \.salary-line > strong/);
@@ -184,16 +196,28 @@ test("英文 HTML 会完整本地化主要小票内容", () => {
   assert.match(html, /new Blob\(\[transferConfig\.content\]/);
 });
 
-test("中文 HTML 展示对应的 GitHub Star 引导", () => {
+test("中文 HTML 使用夜班回执所并保留完整功能入口", () => {
   const record = buildReceiptRecord(metrics, "classic", "zh-CN");
+  record.generated_at = "2026-07-18T13:30:00.000Z";
   const html = renderHtml({ record, dataQrDataUrl: "data:image/png;base64,DATA" });
 
-  assert.match(html, /喜欢这个工具？点个 Star ⭐/);
-  assert.match(html, /<aside class="sidebar" aria-label="相关信息">/);
-  assert.match(html, /支持项目/);
-  assert.match(html, /更新日志/);
-  assert.match(html, /赞助伙伴/);
-  assert.match(html, /更多小票功能/);
+  assert.match(html, /<html lang="zh-CN" data-theme="classic" data-scene="night">/);
+  assert.match(html, /世界边缘 · AI 回执所 · 夜班/);
+  assert.match(html, /AI 回执所 · 夜班值守中/);
+  assert.match(html, /2026\.07\.18 · 21:30 · 票仔签收/);
+  assert.match(html, /今日回执/);
+  assert.match(html, /已送达/);
+  assert.match(html, /离开前，替回执所点亮一颗星 ★/);
+  assert.match(html, /查看回执所最近发生了什么 →/);
+  assert.match(html, /可解锁 0\.015x GPT 专享分组/);
+  assert.match(html, /今日回执包/);
+  assert.match(html, /打工小票/);
+  assert.match(html, /情绪小票/);
+  assert.match(html, /本次勋章/);
+  assert.match(html, /小票屋/);
+  assert.match(html, /勋章墙/);
+  assert.match(html, /规划中/);
+  assert.match(html, /更多命令行功能/);
   assert.match(html, /15 项/);
   assert.match(html, /时间范围/);
   assert.match(html, /会话与项目/);
@@ -201,7 +225,8 @@ test("中文 HTML 展示对应的 GitHub Star 引导", () => {
   assert.match(html, /生成最近 3 小时小票/);
   assert.match(html, /npx codex-work-receipt@latest --hours 3/);
   assert.doesNotMatch(html, /--hours 3 --lang en/);
-  assert.match(html, /<\/div>\s*<details class="sidebar-card sidebar-features" data-feature-details>/);
+  assert.equal((html.match(/data-copy-command=/g) || []).length, 15);
+  assert.equal((html.match(/data-scene-mode=/g) || []).length, 3);
   assert.equal(html.split(OPEN_SOURCE_REPOSITORY_URL).length - 1, 2);
 });
 

@@ -19,9 +19,17 @@ const DOM_TO_IMAGE_SOURCE = fs.readFileSync(
   process.env.CODEX_WORK_RECEIPT_DOM_TO_IMAGE || require.resolve("dom-to-image-more"),
   "utf8",
 );
+const OFFICE_STYLE_SOURCE = fs.readFileSync(
+  new URL("./office-v6.css", import.meta.url),
+  "utf8",
+);
 const MODELFLARE_LOGO_DATA_URL = `data:image/png;base64,${fs.readFileSync(
   new URL("../../docs/images/sponsors/modelflare-logo.png", import.meta.url),
 ).toString("base64")}`;
+const TICKET_BUDDY_WINDOW_DATA_URL = `data:image/png;base64,${fs.readFileSync(
+  new URL("../../assets/codex-pet/ai-work-receipt/window-pet.png.base64", import.meta.url),
+  "utf8",
+).trim()}`;
 const MODELFLARE_URL = "https://modelflare.dev/sign-up?partner=OB9YXNSEEGOL";
 
 function inlineScript(value) {
@@ -78,6 +86,15 @@ function formatPercent(value, locale) {
 
 function formatSeconds(milliseconds, locale) {
   return `${formatDecimal(Number(milliseconds || 0) / 1000, locale)}s`;
+}
+
+function getHourInTimezone(date, timezone) {
+  const hourPart = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    hour: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date).find((item) => item.type === "hour");
+  return Number(hourPart?.value || 0);
 }
 
 function renderBreakdown(items, { key, labels = {}, unit, emptyLabel, locale }) {
@@ -225,6 +242,15 @@ export function renderHtml({ record, dataQrDataUrl = null, miniProgramCodeDataUr
   const startAt = new Date(record.period.start_at);
   const endAt = new Date(record.period.end_at);
   const timezone = record.period.timezone;
+  const generatedAt = new Date(record.generated_at);
+  const generatedDate = formatDate(generatedAt, timezone, locale);
+  const generatedTime = formatTime(generatedAt, timezone, locale);
+  const generatedHour = getHourInTimezone(generatedAt, timezone);
+  const generatedScene = generatedHour >= 6 && generatedHour < 18 ? "day" : "night";
+  const generatedShift = copy.office.shifts[generatedScene];
+  const shiftHeader = copy.office.shiftHeader.replace("{shift}", generatedShift);
+  const shiftSign = copy.office.shiftSign.replace("{shift}", generatedShift);
+  const shiftOnDuty = copy.office.shiftOnDuty.replace("{shift}", generatedShift);
   const displayDate = formatDate(endAt, timezone, locale);
   const rangeStartDate = record.period.range_start_date || formatDateKey(record.period.start_at.slice(0, 10), "zh-CN").replaceAll("/", "-");
   const rangeEndDate = record.period.range_end_date || formatDateKey(record.period.end_at.slice(0, 10), "zh-CN").replaceAll("/", "-");
@@ -287,6 +313,22 @@ export function renderHtml({ record, dataQrDataUrl = null, miniProgramCodeDataUr
     .reduce((total, group) => total + group.commands.length, 0);
   const featureCountLabel = copy.sidebar.features.countLabel
     .replace("{count}", formatNumber(featureCommandCount, locale));
+  const commandDescription = copy.office.commandDescription
+    .replace("{count}", formatNumber(featureCommandCount, locale));
+  const officeConfig = JSON.stringify({
+    generatedScene,
+    shifts: copy.office.shifts,
+    shiftHeader: copy.office.shiftHeader,
+    shiftSign: copy.office.shiftSign,
+    shiftOnDuty: copy.office.shiftOnDuty,
+    switchedAutoDay: copy.office.switchedAutoDay,
+    switchedAutoNight: copy.office.switchedAutoNight,
+    switchedDay: copy.office.switchedDay,
+    switchedNight: copy.office.switchedNight,
+    windPause: copy.office.windPause,
+    windResume: copy.office.windResume,
+    workReceiptDescription: copy.office.workReceiptDescription,
+  }).replaceAll("<", "\\u003c");
   const insights = renderInsights(record, copy, locale);
   const rows = [
     receiptRow(copy.rows.scope, scopeLabel),
@@ -346,10 +388,11 @@ export function renderHtml({ record, dataQrDataUrl = null, miniProgramCodeDataUr
       </div>`;
 
   return `<!doctype html>
-<html lang="${escapeHtml(copy.htmlLang)}" data-theme="${escapeHtml(record.presentation.default_theme)}">
+<html lang="${escapeHtml(copy.htmlLang)}" data-theme="${escapeHtml(record.presentation.default_theme)}" data-scene="${generatedScene}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
   <title>${escapeHtml(copy.pageTitle)} · ${escapeHtml(displayDate)}</title>
   <style>
     :root {
@@ -1230,12 +1273,142 @@ export function renderHtml({ record, dataQrDataUrl = null, miniProgramCodeDataUr
       .sidebar { flex-direction: column; }
       .sidebar-card { flex-basis: auto; }
     }
+${OFFICE_STYLE_SOURCE}
   </style>
 </head>
 <body>
-  <div class="layout">
-  <main class="page">
-    <div class="toolbar">
+  <div class="ambient" aria-hidden="true"><div class="stars"></div><div class="haze"></div></div>
+
+  <header class="world-header">
+    <div class="office-id">
+      <div class="office-id__mark">C</div>
+      <div><strong id="officeShiftName">${escapeHtml(shiftHeader)}</strong><span>WORLD'S EDGE / RECEIPT OFFICE NO. 07</span></div>
+    </div>
+
+    <nav class="primary-nav" aria-label="${escapeHtml(copy.office.primaryNavAria)}">
+      <button class="primary-nav__button is-active" type="button" aria-current="page">${escapeHtml(copy.office.todayReceipt)}</button>
+      <button class="primary-nav__button" type="button" data-planned-message="${escapeHtml(copy.office.ticketHousePlanned)}">${escapeHtml(copy.office.ticketHouse)}<small>${escapeHtml(copy.office.planned)}</small></button>
+      <button class="primary-nav__button" type="button" data-planned-message="${escapeHtml(copy.office.badgeWallPlanned)}">${escapeHtml(copy.office.badgeWall)}<small>${escapeHtml(copy.office.planned)}</small></button>
+    </nav>
+
+    <div class="header-controls">
+      <div class="scene-mode-switch" role="group" aria-label="${escapeHtml(copy.office.shiftAria)}">
+        <button type="button" data-scene-mode="auto" aria-pressed="true" title="${escapeHtml(copy.office.autoModeTitle)}">${escapeHtml(copy.office.autoMode)}</button>
+        <button type="button" data-scene-mode="day" aria-pressed="false">${escapeHtml(copy.office.dayMode)}</button>
+        <button type="button" data-scene-mode="night" aria-pressed="false">${escapeHtml(copy.office.nightMode)}</button>
+      </div>
+
+      <button class="world-button command-drawer-toggle" id="commandDrawerToggle" type="button" aria-expanded="false" aria-controls="commandDrawer" title="${escapeHtml(copy.office.commandToggleTitle)}">
+        <span class="command-symbol" aria-hidden="true">&gt;_</span>
+        <span>${escapeHtml(copy.sidebar.features.title)}</span>
+      </button>
+
+      <button class="world-button" id="windToggle" type="button" aria-pressed="false" title="${escapeHtml(copy.office.windPause)}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M3 8h10.5a3.5 3.5 0 1 0-3.1-5.1"/><path d="M3 12h16a3 3 0 1 1-2.6 4.5"/><path d="M3 16h7"/></svg>
+        <span>${escapeHtml(copy.office.windPause)}</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="world">
+    <section class="scene" aria-label="${escapeHtml(copy.office.sceneAria)}">
+      <div class="scene-intro">
+        <div class="arrival-shift"><i class="status-light"></i><span id="arrivalShiftLabel">${escapeHtml(shiftOnDuty)}</span></div>
+        <p class="arrival-time">${escapeHtml(generatedDate)} · ${escapeHtml(generatedTime)} · ${escapeHtml(copy.office.arrivalSigned)}</p>
+        <h1>${escapeHtml(copy.office.arrivalTitle)}<br><em>${escapeHtml(copy.office.arrivalEmphasis)}</em></h1>
+        <p class="arrival-copy">${escapeHtml(copy.office.arrivalDescription)}</p>
+        <div class="arrival-stats" aria-label="${escapeHtml(copy.office.arrivalSummaryAria)}">
+          <span><strong>${escapeHtml(formatNumber(record.stats.session_count, locale))}</strong> ${escapeHtml(copy.office.sessionsSummary)}</span>
+          <span><strong>${escapeHtml(formatNumber(record.stats.completed_turns, locale))}</strong> ${escapeHtml(copy.office.turnsSummary)}</span>
+          <span><strong>${escapeHtml(formatDuration(record.stats.work_duration_ms))}</strong> ${escapeHtml(copy.office.durationSummary)}</span>
+        </div>
+      </div>
+      <div class="moon" aria-hidden="true"></div>
+      <div class="mountains" aria-hidden="true"></div>
+      <div class="wind-lines" aria-hidden="true"></div>
+      <div class="ambient-receipt" aria-hidden="true"><div class="ambient-paper"></div></div>
+      <div class="grass" aria-hidden="true"></div>
+      <div class="cliff" aria-hidden="true"></div>
+
+      <div class="office">
+        <div class="antenna" aria-hidden="true"><i></i></div>
+        <div class="roof" aria-hidden="true"></div>
+        <div class="wall" aria-hidden="true"></div>
+        <div class="office-sign" id="officeSceneSign">${escapeHtml(shiftSign)}</div>
+        <div class="window">
+          <img class="pet" src="${TICKET_BUDDY_WINDOW_DATA_URL}" alt="${escapeHtml(copy.office.petAlt)}">
+        </div>
+        <div class="door" aria-hidden="true"></div>
+        <button class="printer" id="printerCommandToggle" type="button" aria-expanded="false" aria-controls="commandDrawer" title="${escapeHtml(copy.office.printerCommandTitle)}"><span>CWR / ${escapeHtml(copy.office.commandDrawerCompact)}</span></button>
+
+        <div class="office-info-cluster">
+          <div class="notice-lamp" aria-hidden="true"><i></i></div>
+          <div class="notice-title">${escapeHtml(copy.office.officeNotice)}</div>
+          <a class="log-board" href="${escapeHtml(changelogUrl)}" target="_blank" rel="noopener noreferrer">
+            <small>${escapeHtml(copy.office.changelogKicker)}</small>
+            ${escapeHtml(copy.office.changelogText)}
+          </a>
+          <a class="github-board github-star-link" href="${escapeHtml(githubStarPrompt.url)}" target="_blank" rel="noopener noreferrer">
+            <small>${escapeHtml(copy.office.githubKicker)}</small>
+            ${escapeHtml(copy.office.githubText)}
+          </a>
+          <a class="sponsor-crate" href="${MODELFLARE_URL}" target="_blank" rel="noopener noreferrer">
+            <img src="${MODELFLARE_LOGO_DATA_URL}" alt="${escapeHtml(copy.sidebar.sponsorAlt)}" width="38" height="38">
+            <span><small>${escapeHtml(copy.office.sponsorKicker)}</small>ModelFlare<strong class="sponsor-offer">${escapeHtml(copy.office.sponsorOffer)}</strong></span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <aside class="today-package" aria-label="${escapeHtml(copy.office.todayPackTitle)}">
+      <div class="today-package__heading">
+        <div><small>${escapeHtml(copy.office.todayPackKicker)}</small><strong>${escapeHtml(copy.office.todayPackTitle)}</strong></div>
+        <span>${escapeHtml(generatedDate)}</span>
+      </div>
+      <button class="package-item is-active" type="button" id="workReceiptShortcut" aria-current="true">
+        <span class="package-item__icon package-item__icon--receipt" aria-hidden="true">${locale === "en" ? "WR" : "票"}</span>
+        <span><strong>${escapeHtml(copy.office.workReceipt)}</strong><small>${escapeHtml(copy.office.workReceiptDescription)}</small></span>
+        <b>${escapeHtml(copy.office.delivered)}</b>
+      </button>
+      <button class="package-item" type="button" data-planned-message="${escapeHtml(copy.office.moodReceiptPlanned)}">
+        <span class="package-item__icon package-item__icon--mood" aria-hidden="true">${locale === "en" ? "MO" : "心"}</span>
+        <span><strong>${escapeHtml(copy.office.moodReceipt)}</strong><small>${escapeHtml(copy.office.moodReceiptDescription)}</small></span>
+        <b>${escapeHtml(copy.office.planned)}</b>
+      </button>
+      <button class="package-item" type="button" data-planned-message="${escapeHtml(copy.office.badgesPlanned)}">
+        <span class="package-item__icon package-item__icon--badge" aria-hidden="true">${locale === "en" ? "BD" : "章"}</span>
+        <span><strong>${escapeHtml(copy.office.currentBadges)}</strong><small>${escapeHtml(copy.office.currentBadgesDescription)}</small></span>
+        <b>${escapeHtml(copy.office.planned)}</b>
+      </button>
+      <div class="today-package__links">
+        <button type="button" data-planned-message="${escapeHtml(copy.office.ticketHousePlanned)}">${escapeHtml(copy.office.enterTicketHouse)}</button>
+        <button type="button" data-planned-message="${escapeHtml(copy.office.badgeWallPlanned)}">${escapeHtml(copy.office.viewBadgeWall)}</button>
+      </div>
+    </aside>
+
+    <aside aria-label="${escapeHtml(copy.office.commandDrawerAria)}">
+      <details class="feature-dock" id="commandDrawer" data-feature-details>
+        <summary class="feature-dock__summary">
+          <span class="feature-dock__title">
+            <span class="feature-dock__terminal" aria-hidden="true">&gt;_</span>
+            <span class="feature-dock__title-text">${escapeHtml(copy.sidebar.features.title)}</span>
+            <span class="feature-dock__compact">${escapeHtml(copy.office.commandDrawerCompact)}</span>
+          </span>
+          <span class="feature-dock__meta">
+            <span class="feature-dock__count">${escapeHtml(featureCountLabel)}</span>
+            <svg class="feature-dock__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+          </span>
+        </summary>
+        <div class="feature-dock__body" data-feature-scroll>
+          <p class="feature-dock__description">${escapeHtml(commandDescription)}</p>${featureCommands}
+          <span class="feature-copy-status" data-feature-copy-status role="status" aria-live="polite"></span>
+        </div>
+      </details>
+    </aside>
+
+    <section class="ticket-rail" aria-label="${escapeHtml(copy.receiptAria)}">
+      <div class="paper-bridge" aria-hidden="true"></div>
+      <div class="receipt-toolbar toolbar">
       <nav class="theme-switcher" aria-label="${escapeHtml(copy.themeAria)}">
         <button class="theme-button" type="button" data-theme-value="classic">${escapeHtml(copy.themes.classic)}</button>
         <button class="theme-button" type="button" data-theme-value="diner">${escapeHtml(copy.themes.diner)}</button>
@@ -1246,6 +1419,9 @@ export function renderHtml({ record, dataQrDataUrl = null, miniProgramCodeDataUr
         <span class="export-status" id="export-status" role="status" aria-live="polite"></span>
       </div>
     </div>
+
+    <div class="ticket-sway">
+    <div class="receipt-scope">
 
     <div class="export-sheet" id="receipt-export">
       <article class="paper receipt" aria-label="${escapeHtml(copy.receiptAria)}">
@@ -1299,55 +1475,19 @@ export function renderHtml({ record, dataQrDataUrl = null, miniProgramCodeDataUr
       <p class="transfer-note">${escapeHtml(copy.transferNote)}</p>
       </section>
     </div>
-
+    </div>
+    </div>
     <p class="privacy">${escapeHtml(copy.privacy)}</p>
+    </section>
   </main>
-  <aside class="sidebar" aria-label="${escapeHtml(copy.sidebar.aria)}">
-    <div class="sidebar-card">
-      <h3 class="sidebar-card__title">
-        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.75.75 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/></svg>
-        ${escapeHtml(copy.sidebar.supportTitle)}
-      </h3>
-      <p>${escapeHtml(copy.sidebar.supportDescription)}</p>
-      <a class="github-star-link" href="${escapeHtml(githubStarPrompt.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(githubStarPrompt.label)}</a>
-    </div>
-    <div class="sidebar-card">
-      <h3 class="sidebar-card__title">
-        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.93 8.5a4.002 4.002 0 0 1-7.86 0H.75a.75.75 0 0 1 0-1.5h3.32a4.002 4.002 0 0 1 7.86 0h3.32a.75.75 0 0 1 0 1.5Zm-1.43-.75a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0Z"/></svg>
-        ${escapeHtml(copy.sidebar.changelogTitle)}
-      </h3>
-      <a href="${escapeHtml(changelogUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(copy.sidebar.changelogLink)}</a>
-    </div>
-    <div class="sidebar-card sidebar-sponsor">
-      <span class="sidebar-sponsor__label">${escapeHtml(copy.sidebar.sponsorLabel)}</span>
-      <a class="sidebar-sponsor__link" href="${MODELFLARE_URL}" target="_blank" rel="noopener noreferrer">
-        <img src="${MODELFLARE_LOGO_DATA_URL}" alt="${escapeHtml(copy.sidebar.sponsorAlt)}" width="40" height="40">
-        <span class="sidebar-sponsor__name">ModelFlare<br>modelflare.dev</span>
-      </a>
-    </div>
-    <details class="sidebar-card sidebar-features" data-feature-details>
-      <summary class="sidebar-features__summary">
-        <span class="sidebar-card__title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" x2="20" y1="19" y2="19"></line></svg>
-          ${escapeHtml(copy.sidebar.features.title)}
-        </span>
-        <span class="sidebar-features__meta">
-          <span class="sidebar-features__count">${escapeHtml(featureCountLabel)}</span>
-          <svg class="sidebar-features__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
-        </span>
-      </summary>
-      <div class="sidebar-features__body">
-        <p class="sidebar-features__description">${escapeHtml(copy.sidebar.features.description)}</p>${featureCommands}
-        <span class="feature-copy-status" data-feature-copy-status role="status" aria-live="polite"></span>
-      </div>
-    </details>
-  </aside>
-  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script>${inlineScript(DOM_TO_IMAGE_SOURCE)}</script>
   <script>
     const exportConfig = ${exportConfig};
     const transferConfig = ${transferConfig};
     const featureConfig = ${featureConfig};
+    const officeConfig = ${officeConfig};
     const themes = new Set(["classic", "diner", "payroll"]);
     const buttons = [...document.querySelectorAll("[data-theme-value]")];
     function applyTheme(theme) {
@@ -1361,17 +1501,126 @@ export function renderHtml({ record, dataQrDataUrl = null, miniProgramCodeDataUr
     try { savedTheme = localStorage.getItem("codex-work-receipt-theme"); } catch {}
     applyTheme(savedTheme || document.documentElement.dataset.theme);
 
-    const featureDetails = document.querySelector("[data-feature-details]");
-    if (featureDetails) {
-      try {
-        const savedFeatureState = localStorage.getItem("codex-work-receipt-features-open");
-        if (savedFeatureState === "true") featureDetails.open = true;
-        if (savedFeatureState === "false") featureDetails.open = false;
-      } catch {}
-      featureDetails.addEventListener("toggle", () => {
-        try { localStorage.setItem("codex-work-receipt-features-open", String(featureDetails.open)); } catch {}
+    const toast = document.getElementById("toast");
+    let toastTimer = null;
+    function showToast(message) {
+      if (!toast) return;
+      clearTimeout(toastTimer);
+      toast.textContent = message;
+      toast.dataset.show = "true";
+      toastTimer = setTimeout(() => { toast.dataset.show = "false"; }, 2600);
+    }
+
+    const sceneModeButtons = [...document.querySelectorAll("[data-scene-mode]")];
+    const officeShiftName = document.getElementById("officeShiftName");
+    const arrivalShiftLabel = document.getElementById("arrivalShiftLabel");
+    const officeSceneSign = document.getElementById("officeSceneSign");
+    function applySceneMode(mode) {
+      const selectedMode = new Set(["auto", "day", "night"]).has(mode) ? mode : "auto";
+      const scene = selectedMode === "auto" ? officeConfig.generatedScene : selectedMode;
+      const shift = officeConfig.shifts[scene];
+      document.documentElement.dataset.scene = scene;
+      document.documentElement.style.colorScheme = scene === "day" ? "light" : "dark";
+      sceneModeButtons.forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.sceneMode === selectedMode)));
+      if (officeShiftName) officeShiftName.textContent = officeConfig.shiftHeader.replace("{shift}", shift);
+      if (arrivalShiftLabel) arrivalShiftLabel.textContent = officeConfig.shiftOnDuty.replace("{shift}", shift);
+      if (officeSceneSign) officeSceneSign.textContent = officeConfig.shiftSign.replace("{shift}", shift);
+    }
+    sceneModeButtons.forEach((button) => button.addEventListener("click", () => {
+      applySceneMode(button.dataset.sceneMode);
+      const message = button.dataset.sceneMode === "auto"
+        ? officeConfig.generatedScene === "day" ? officeConfig.switchedAutoDay : officeConfig.switchedAutoNight
+        : button.dataset.sceneMode === "day" ? officeConfig.switchedDay : officeConfig.switchedNight;
+      showToast(message);
+    }));
+    applySceneMode("auto");
+
+    const windToggle = document.getElementById("windToggle");
+    if (windToggle) {
+      windToggle.addEventListener("click", () => {
+        const paused = document.body.classList.toggle("wind-paused");
+        const label = paused ? officeConfig.windResume : officeConfig.windPause;
+        windToggle.setAttribute("aria-pressed", String(paused));
+        const text = windToggle.querySelector("span:last-child");
+        if (text) text.textContent = label;
+        windToggle.title = label;
       });
     }
+
+    const ticketRail = document.querySelector(".ticket-rail");
+    const featureDetails = document.querySelector("[data-feature-details]");
+    const featureScroll = document.querySelector("[data-feature-scroll]");
+    const commandDrawerToggle = document.getElementById("commandDrawerToggle");
+    const printerCommandToggle = document.getElementById("printerCommandToggle");
+    function syncCommandDrawerState() {
+      const open = Boolean(featureDetails?.open);
+      commandDrawerToggle?.setAttribute("aria-expanded", String(open));
+      printerCommandToggle?.setAttribute("aria-expanded", String(open));
+    }
+    function toggleCommandDrawer(force) {
+      if (!featureDetails) return;
+      featureDetails.open = typeof force === "boolean" ? force : !featureDetails.open;
+      syncCommandDrawerState();
+    }
+    if (featureDetails) {
+      featureDetails.open = false;
+      featureDetails.addEventListener("toggle", syncCommandDrawerState);
+    }
+    commandDrawerToggle?.addEventListener("click", () => toggleCommandDrawer());
+    printerCommandToggle?.addEventListener("click", () => toggleCommandDrawer());
+    syncCommandDrawerState();
+
+    document.addEventListener("pointerdown", (event) => {
+      if (!featureDetails?.open) return;
+      if (featureDetails.contains(event.target) || commandDrawerToggle?.contains(event.target) || printerCommandToggle?.contains(event.target)) return;
+      toggleCommandDrawer(false);
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && featureDetails?.open) {
+        toggleCommandDrawer(false);
+        commandDrawerToggle?.focus();
+      }
+    });
+
+    document.querySelectorAll("[data-planned-message]").forEach((button) => {
+      button.addEventListener("click", () => showToast(button.dataset.plannedMessage || ""));
+    });
+    document.getElementById("workReceiptShortcut")?.addEventListener("click", () => {
+      ticketRail?.scrollTo({ top: 0, behavior: "smooth" });
+      showToast(officeConfig.workReceiptDescription);
+    });
+    document.querySelector(".primary-nav__button.is-active")?.addEventListener("click", () => {
+      ticketRail?.scrollTo({ top: 0, behavior: "smooth" });
+    });
+
+    document.addEventListener("wheel", (event) => {
+      if (event.ctrlKey || Math.abs(event.deltaY) < Math.abs(event.deltaX)) return;
+      if (featureDetails?.contains(event.target)) {
+        event.preventDefault();
+        if (featureDetails.open && featureScroll) featureScroll.scrollBy({ top: event.deltaY, behavior: "auto" });
+        return;
+      }
+      if (!ticketRail || ticketRail.contains(event.target)) return;
+      event.preventDefault();
+      ticketRail.scrollBy({ top: event.deltaY, behavior: "auto" });
+    }, { passive: false });
+
+    document.addEventListener("keydown", (event) => {
+      if (!ticketRail || event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target instanceof Element ? event.target : null;
+      if (target?.closest("button, a, input, textarea, select, summary, code, [contenteditable='true'], [role='tab'], [data-feature-details]")) return;
+      let distance = null;
+      if (event.key === "ArrowDown") distance = 64;
+      if (event.key === "ArrowUp") distance = -64;
+      if (event.key === "PageDown") distance = ticketRail.clientHeight * .82;
+      if (event.key === "PageUp") distance = -ticketRail.clientHeight * .82;
+      if (event.key === " " || event.code === "Space") distance = ticketRail.clientHeight * (event.shiftKey ? -.82 : .82);
+      if (event.key === "Home") distance = -ticketRail.scrollHeight;
+      if (event.key === "End") distance = ticketRail.scrollHeight;
+      if (distance === null) return;
+      event.preventDefault();
+      ticketRail.scrollBy({ top: distance, behavior: "smooth" });
+    });
 
     const featureTabs = document.querySelector("[data-feature-tabs]");
     if (featureTabs) {
