@@ -30,6 +30,9 @@ const TICKET_BUDDY_WINDOW_DATA_URL = `data:image/png;base64,${fs.readFileSync(
   new URL("../../assets/codex-pet/ai-work-receipt/window-pet.png.base64", import.meta.url),
   "utf8",
 ).trim()}`;
+const XIAOHONGSHU_BETA_GROUP_QR_DATA_URL = `data:image/png;base64,${fs.readFileSync(
+  new URL("../../assets/xiaohongshu-beta-group-qr.png", import.meta.url),
+).toString("base64")}`;
 const MODELFLARE_URL = "https://modelflare.dev/sign-up?partner=OB9YXNSEEGOL";
 
 function inlineScript(value) {
@@ -239,6 +242,7 @@ export function renderHtml({ record, dataQrDataUrl = null, miniProgramCodeDataUr
   const copy = getReceiptCopy(locale);
   const githubStarPrompt = getHtmlStarPrompt(locale);
   const changelogUrl = `${githubStarPrompt.url}/blob/main/CHANGELOG.md`;
+  const githubIssuesUrl = `${githubStarPrompt.url}/issues`;
   const startAt = new Date(record.period.start_at);
   const endAt = new Date(record.period.end_at);
   const timezone = record.period.timezone;
@@ -325,8 +329,6 @@ export function renderHtml({ record, dataQrDataUrl = null, miniProgramCodeDataUr
     switchedAutoNight: copy.office.switchedAutoNight,
     switchedDay: copy.office.switchedDay,
     switchedNight: copy.office.switchedNight,
-    windPause: copy.office.windPause,
-    windResume: copy.office.windResume,
     workReceiptDescription: copy.office.workReceiptDescription,
   }).replaceAll("<", "\\u003c");
   const insights = renderInsights(record, copy, locale);
@@ -1303,9 +1305,9 @@ ${OFFICE_STYLE_SOURCE}
         <span>${escapeHtml(copy.sidebar.features.title)}</span>
       </button>
 
-      <button class="world-button" id="windToggle" type="button" aria-pressed="false" title="${escapeHtml(copy.office.windPause)}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M3 8h10.5a3.5 3.5 0 1 0-3.1-5.1"/><path d="M3 12h16a3 3 0 1 1-2.6 4.5"/><path d="M3 16h7"/></svg>
-        <span>${escapeHtml(copy.office.windPause)}</span>
+      <button class="world-button" id="feedbackToggle" type="button" aria-haspopup="dialog" aria-controls="feedbackDialog" title="${escapeHtml(copy.office.feedbackButton)}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18.5 3.5 20l1.2-3.8A8 8 0 1 1 7 18.5Z"/><path d="M8 9h8M8 13h5"/></svg>
+        <span>${escapeHtml(copy.office.feedbackButton)}</span>
       </button>
     </div>
   </header>
@@ -1481,6 +1483,48 @@ ${OFFICE_STYLE_SOURCE}
     </section>
   </main>
 
+  <dialog class="feedback-dialog" id="feedbackDialog" aria-labelledby="feedbackDialogTitle">
+    <div class="feedback-dialog__shell">
+      <header class="feedback-dialog__header">
+        <div>
+          <p class="feedback-dialog__eyebrow">FEEDBACK DESK · ON DUTY</p>
+          <h2 id="feedbackDialogTitle">${escapeHtml(copy.office.feedbackTitle)}</h2>
+        </div>
+        <button class="feedback-dialog__close" type="button" data-feedback-close aria-label="${escapeHtml(copy.office.feedbackCloseAria)}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </header>
+
+      <div class="feedback-dialog__body">
+        <section class="feedback-community" aria-label="${escapeHtml(copy.office.feedbackCommunityAria)}">
+          <figure class="feedback-community__qr">
+            <img src="${XIAOHONGSHU_BETA_GROUP_QR_DATA_URL}" alt="${escapeHtml(copy.office.feedbackCommunityAlt)}">
+          </figure>
+          <div class="feedback-community__copy">
+            <span class="feedback-community__tag">${escapeHtml(copy.office.feedbackCommunityTag)}</span>
+            <h3>${escapeHtml(copy.office.feedbackCommunityTitle)}</h3>
+            <p class="feedback-community__lead">${escapeHtml(copy.office.feedbackCommunityLead)}</p>
+          </div>
+        </section>
+
+        <section class="feedback-issue" aria-label="${escapeHtml(copy.office.feedbackIssueAria)}">
+          <div class="feedback-issue__mark" aria-hidden="true">GH</div>
+          <div class="feedback-issue__copy">
+            <small>GITHUB ISSUE</small>
+            <h3>${escapeHtml(copy.office.feedbackIssueTitle)}</h3>
+            <p>${escapeHtml(copy.office.feedbackIssueDescription)}</p>
+          </div>
+          <a class="feedback-issue__link" href="${escapeHtml(githubIssuesUrl)}" target="_blank" rel="noopener noreferrer">
+            ${escapeHtml(copy.office.feedbackIssueButton)}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
+          </a>
+        </section>
+
+        <p class="feedback-dialog__privacy">${escapeHtml(copy.office.feedbackPrivacy)}</p>
+      </div>
+    </div>
+  </dialog>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script>${inlineScript(DOM_TO_IMAGE_SOURCE)}</script>
   <script>
@@ -1535,17 +1579,26 @@ ${OFFICE_STYLE_SOURCE}
     }));
     applySceneMode("auto");
 
-    const windToggle = document.getElementById("windToggle");
-    if (windToggle) {
-      windToggle.addEventListener("click", () => {
-        const paused = document.body.classList.toggle("wind-paused");
-        const label = paused ? officeConfig.windResume : officeConfig.windPause;
-        windToggle.setAttribute("aria-pressed", String(paused));
-        const text = windToggle.querySelector("span:last-child");
-        if (text) text.textContent = label;
-        windToggle.title = label;
-      });
+    const feedbackToggle = document.getElementById("feedbackToggle");
+    const feedbackDialog = document.getElementById("feedbackDialog");
+    const feedbackClose = feedbackDialog?.querySelector("[data-feedback-close]");
+    function closeFeedbackDialog() {
+      if (!feedbackDialog?.open) return;
+      feedbackDialog.close();
     }
+    feedbackToggle?.addEventListener("click", () => {
+      if (!feedbackDialog || feedbackDialog.open) return;
+      feedbackDialog.showModal();
+      document.body.classList.add("feedback-dialog-open");
+    });
+    feedbackClose?.addEventListener("click", closeFeedbackDialog);
+    feedbackDialog?.addEventListener("click", (event) => {
+      if (event.target === feedbackDialog) closeFeedbackDialog();
+    });
+    feedbackDialog?.addEventListener("close", () => {
+      document.body.classList.remove("feedback-dialog-open");
+      feedbackToggle?.focus();
+    });
 
     const ticketRail = document.querySelector(".ticket-rail");
     const featureDetails = document.querySelector("[data-feature-details]");

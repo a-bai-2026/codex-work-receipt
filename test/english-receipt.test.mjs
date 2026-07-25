@@ -121,19 +121,31 @@ test("英文 HTML 会完整本地化 V6 回执所与原版小票内容", () => {
   assert.match(html, /data-scene-mode="auto" aria-pressed="true"/);
   assert.match(html, /id="commandDrawerToggle"/);
   assert.match(html, /id="printerCommandToggle"/);
-  assert.match(html, /id="windToggle"/);
+  assert.match(html, /id="feedbackToggle"/);
+  assert.doesNotMatch(html, /id="windToggle"|wind-paused|Pause wind|Resume wind/);
   assert.match(html, /data:image\/png;base64,[A-Za-z0-9+/=]+" alt="Ticket Buddy on duty/);
+
+  assert.match(html, /<dialog class="feedback-dialog" id="feedbackDialog" aria-labelledby="feedbackDialogTitle">/);
+  assert.match(html, /Scan to join the Xiaohongshu beta group/);
+  assert.match(html, /Send me problems, screenshots, or ideas directly\./);
+  assert.match(html, /Or open a GitHub Issue/);
+  assert.match(html, /Give feedback on GitHub/);
+  assert.match(html, /To protect your privacy, do not submit prompts, code, secrets, or local file paths\./);
+  assert.match(html, /data:image\/png;base64,[A-Za-z0-9+/=]+" alt="Xiaohongshu beta group QR code, valid until August 22, 2026"/);
+  assert.match(html, new RegExp(`href="${OPEN_SOURCE_REPOSITORY_URL}/issues"`));
+  assert.match(html, /feedbackDialog\.showModal\(\)/);
+  assert.match(html, /feedbackDialog\?\.addEventListener\("close"/);
 
   assert.match(html, /class="office-info-cluster"/);
   assert.match(html, /See what changed at the Receipt Office →/);
   assert.match(html, /Light a star for the Receipt Office on GitHub ★/);
-  assert.equal(html.split(OPEN_SOURCE_REPOSITORY_URL).length - 1, 2);
+  assert.equal(html.split(OPEN_SOURCE_REPOSITORY_URL).length - 1, 3);
   assert.match(html, /class="github-board github-star-link"[^>]+target="_blank" rel="noopener noreferrer"/);
   assert.match(html, new RegExp(OPEN_SOURCE_REPOSITORY_URL + "/blob/main/CHANGELOG\\.md"));
   assert.match(html, /href="https:\/\/modelflare\.dev\/sign-up\?partner=OB9YXNSEEGOL"/);
   assert.match(html, /<img src="data:image\/png;base64,[A-Za-z0-9+/=]+" alt="ModelFlare logo"/);
   assert.match(html, /Unlock 0\.015x GPT exclusive group/);
-  assert.equal((html.match(/target="_blank" rel="noopener noreferrer"/g) || []).length, 3);
+  assert.equal((html.match(/target="_blank" rel="noopener noreferrer"/g) || []).length, 4);
 
   assert.match(html, /<details class="feature-dock" id="commandDrawer" data-feature-details>/);
   assert.match(html, /More CLI features/);
@@ -181,6 +193,7 @@ test("英文 HTML 会完整本地化 V6 回执所与原版小票内容", () => {
   assert.doesNotMatch(exportMarkup, /theme-switcher|save-receipt-image|class="privacy"/);
   assert.doesNotMatch(exportMarkup, /github-star-link|GitHub|Changelog|ModelFlare/);
   assert.doesNotMatch(exportMarkup, /More CLI features|data-copy-command|today-package|data-planned-message/);
+  assert.doesNotMatch(exportMarkup, /feedback-dialog|Xiaohongshu beta group|GitHub Issue/);
   assert.match(html, /function sanitizeExportNode/);
   assert.match(html, /function normalizeExportTextLayout/);
   assert.match(html, /\.meta > div, \.receipt-row > span, \.receipt-row > strong, \.salary-line > span, \.salary-line > strong/);
@@ -217,6 +230,14 @@ test("中文 HTML 使用夜班回执所并保留完整功能入口", () => {
   assert.match(html, /小票屋/);
   assert.match(html, /勋章墙/);
   assert.match(html, /规划中/);
+  assert.match(html, /id="feedbackToggle"/);
+  assert.match(html, /意见反馈/);
+  assert.match(html, /扫码加入小红书内测群/);
+  assert.match(html, /直接把问题、截图或者想法丢给我/);
+  assert.match(html, /也可以直接给我提 Issue/);
+  assert.match(html, /去 GitHub 反馈/);
+  assert.match(html, /为了保护隐私，请不要提交 Prompt、代码、密钥或本地文件路径。/);
+  assert.doesNotMatch(html, /id="windToggle"|wind-paused|暂停风|让风继续/);
   assert.match(html, /更多命令行功能/);
   assert.match(html, /15 项/);
   assert.match(html, /时间范围/);
@@ -227,7 +248,7 @@ test("中文 HTML 使用夜班回执所并保留完整功能入口", () => {
   assert.doesNotMatch(html, /--hours 3 --lang en/);
   assert.equal((html.match(/data-copy-command=/g) || []).length, 15);
   assert.equal((html.match(/data-scene-mode=/g) || []).length, 3);
-  assert.equal(html.split(OPEN_SOURCE_REPOSITORY_URL).length - 1, 2);
+  assert.equal(html.split(OPEN_SOURCE_REPOSITORY_URL).length - 1, 3);
 });
 
 test("没有单码数据时只保留聊天文件导入，不渲染扫码备选", () => {

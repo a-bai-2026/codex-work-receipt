@@ -790,13 +790,6 @@
 
     .toast[data-show="true"] { opacity: 1; transform: translate(-50%, 0); }
 
-    body.wind-paused .ticket-sway,
-    body.wind-paused .ticket-sway::before,
-    body.wind-paused .paper-bridge,
-    body.wind-paused .grass,
-    body.wind-paused .wind-lines,
-    body.wind-paused .office-sign { animation-play-state: paused; }
-
     @keyframes receipt-wind {
       0%, 100% { transform: translate3d(-6px,0,0) rotateZ(-1.2deg) rotateY(-1deg); }
       18% { transform: translate3d(5px,-1px,0) rotateZ(.35deg) rotateY(.7deg); }
@@ -1057,8 +1050,6 @@
     .departure h2 { margin: 9px 0 7px; font-size: 18px; line-height: 1.35; }
     .departure p { margin: 0; font-size: 10px; }
     .github-link { width: 100%; margin-top: 13px; justify-content: center; }
-
-    body.wind-paused .ambient-receipt { animation-play-state: paused; }
 
     @keyframes ambient-receipt-wind {
       0%, 100% { transform: translate3d(-12px,0,0) rotate(4deg) skewY(-1deg); }
@@ -2199,8 +2190,8 @@
       .scene-mode-switch button { min-height: 26px; padding: 4px 6px; font-size: 8px; }
       .world-button { min-height: 30px; }
       .world-button .command-symbol { display: inline; }
-      #windToggle span { display: none; }
-      #windToggle { width: 32px; padding: 0; }
+      #feedbackToggle span { display: none; }
+      #feedbackToggle { width: 32px; padding: 0; }
       .scene-intro {
         top: 104px;
         left: 10px;
@@ -2257,10 +2248,281 @@
       .receipt-toolbar .export-actions { width: 100%; align-items: stretch; flex-direction: column; }
     }
 
+    body.feedback-dialog-open { overflow: hidden; }
+
+    .feedback-dialog {
+      width: min(720px, calc(100vw - 32px));
+      max-width: none;
+      max-height: min(88dvh, 820px);
+      padding: 0;
+      overflow: auto;
+      border: 0;
+      border-radius: 22px;
+      background: transparent;
+      color: #eff5f0;
+      box-shadow: 0 36px 100px rgba(0,0,0,.56);
+    }
+
+    .feedback-dialog[open] { animation: feedback-dialog-in .24s cubic-bezier(.2,.8,.2,1); }
+
+    .feedback-dialog::backdrop {
+      background: rgba(3,10,18,.74);
+      backdrop-filter: blur(9px) saturate(.82);
+      animation: feedback-backdrop-in .2s ease-out;
+    }
+
+    .feedback-dialog__shell {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(191,224,216,.24);
+      border-radius: inherit;
+      background:
+        radial-gradient(circle at 15% 3%, rgba(168,218,210,.15), transparent 28%),
+        radial-gradient(circle at 94% 0%, rgba(255,128,137,.13), transparent 30%),
+        linear-gradient(145deg, #10283c 0%, #091827 62%, #07131f 100%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.055);
+    }
+
+    .feedback-dialog__shell::after {
+      position: absolute;
+      right: -70px;
+      bottom: -110px;
+      width: 240px;
+      height: 240px;
+      border: 1px solid rgba(168,218,210,.08);
+      border-radius: 50%;
+      content: "";
+      pointer-events: none;
+    }
+
+    .feedback-dialog__header {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 20px 16px;
+      border-bottom: 1px solid rgba(196,222,216,.13);
+    }
+
+    .feedback-dialog__eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin: 0 0 6px;
+      color: rgba(168,218,210,.72);
+      font: 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .2em;
+    }
+
+    .feedback-dialog__eyebrow::before {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #a8dad2;
+      box-shadow: 0 0 13px rgba(168,218,210,.8);
+      content: "";
+    }
+
+    .feedback-dialog__header h2 {
+      margin: 0;
+      font-family: "Songti SC", "STSong", "Noto Serif CJK SC", serif;
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: .03em;
+    }
+
+    .feedback-dialog__close {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      flex: 0 0 auto;
+      padding: 0;
+      border: 1px solid rgba(207,228,223,.18);
+      border-radius: 50%;
+      background: rgba(255,255,255,.035);
+      color: rgba(237,244,239,.72);
+      cursor: pointer;
+      transition: border-color .18s ease, background .18s ease, color .18s ease, transform .18s ease;
+    }
+
+    .feedback-dialog__close:hover {
+      border-color: rgba(207,228,223,.42);
+      background: rgba(255,255,255,.08);
+      color: #fff;
+      transform: rotate(4deg);
+    }
+
+    .feedback-dialog__close:focus-visible,
+    .feedback-issue__link:focus-visible {
+      outline: 2px solid #a8dad2;
+      outline-offset: 3px;
+    }
+
+    .feedback-dialog__body { position: relative; z-index: 1; }
+
+    .feedback-community {
+      display: grid;
+      grid-template-columns: minmax(270px, .96fr) minmax(0, 1fr);
+      gap: 26px;
+      align-items: center;
+      padding: 26px;
+    }
+
+    .feedback-community__qr {
+      margin: 0;
+      padding: 7px;
+      border: 1px solid rgba(255,171,177,.42);
+      border-radius: 18px;
+      background: linear-gradient(145deg, rgba(255,137,145,.18), rgba(255,255,255,.035));
+      box-shadow: 0 20px 48px rgba(0,0,0,.25);
+    }
+
+    .feedback-community__qr img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+    }
+
+    .feedback-community__tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 14px;
+      padding: 6px 9px;
+      border: 1px solid rgba(255,148,156,.3);
+      border-radius: 999px;
+      background: rgba(255,128,137,.08);
+      color: #ffb4b9;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .08em;
+    }
+
+    .feedback-community__copy h3 {
+      margin: 0;
+      font-family: "Songti SC", "STSong", "Noto Serif CJK SC", serif;
+      font-size: clamp(25px, 4vw, 34px);
+      font-weight: 600;
+      line-height: 1.18;
+      letter-spacing: -.02em;
+    }
+
+    .feedback-community__lead {
+      margin: 13px 0 0;
+      color: rgba(235,243,239,.72);
+      font-size: 14px;
+      line-height: 1.75;
+    }
+
+    .feedback-issue {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      margin: 0 26px 14px;
+      padding: 15px;
+      border: 1px solid rgba(195,221,214,.15);
+      border-radius: 14px;
+      background: rgba(255,255,255,.035);
+    }
+
+    .feedback-issue__mark {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border: 1px solid rgba(168,218,210,.23);
+      border-radius: 11px;
+      background: rgba(168,218,210,.07);
+      color: #a8dad2;
+      font: 750 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    .feedback-issue__copy small {
+      display: block;
+      margin-bottom: 5px;
+      color: rgba(168,218,210,.55);
+      font: 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .16em;
+    }
+
+    .feedback-issue__copy h3 { margin: 0; font-size: 14px; font-weight: 680; }
+    .feedback-issue__copy p { margin: 6px 0 0; color: rgba(220,233,228,.53); font-size: 10px; line-height: 1.55; }
+
+    .feedback-issue__link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-height: 38px;
+      padding: 9px 13px;
+      border: 1px solid rgba(168,218,210,.35);
+      border-radius: 9px;
+      background: #a8dad2;
+      color: #10242b;
+      font-size: 10px;
+      font-weight: 760;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: filter .18s ease, transform .18s ease, box-shadow .18s ease;
+    }
+
+    .feedback-issue__link:hover {
+      filter: brightness(1.06);
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px rgba(0,0,0,.22);
+    }
+
+    .feedback-issue__link svg { width: 13px; height: 13px; }
+
+    .feedback-dialog__privacy {
+      margin: 0;
+      padding: 0 26px 22px;
+      color: rgba(195,213,208,.38);
+      font-size: 9px;
+      line-height: 1.55;
+      text-align: center;
+    }
+
+    @keyframes feedback-dialog-in {
+      from { opacity: 0; transform: translateY(12px) scale(.975); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes feedback-backdrop-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @media (max-width: 640px) {
+      .feedback-dialog { width: calc(100vw - 18px); max-height: 92dvh; border-radius: 17px; }
+      .feedback-dialog__header { padding: 15px 16px 13px; }
+      .feedback-dialog__header h2 { font-size: 20px; }
+      .feedback-community { grid-template-columns: 1fr; gap: 18px; padding: 18px; }
+      .feedback-community__qr { width: min(100%, 330px); margin-inline: auto; }
+      .feedback-community__copy { text-align: center; }
+      .feedback-community__tag { margin-bottom: 11px; }
+      .feedback-community__copy h3 { font-size: 27px; }
+      .feedback-community__lead { margin-top: 9px; font-size: 13px; }
+      .feedback-issue { grid-template-columns: 38px minmax(0, 1fr); gap: 11px; margin: 0 18px 12px; padding: 13px; }
+      .feedback-issue__mark { width: 38px; height: 38px; }
+      .feedback-issue__link { grid-column: 1 / -1; width: 100%; }
+      .feedback-dialog__privacy { padding: 0 18px 18px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .feedback-dialog[open],
+      .feedback-dialog::backdrop { animation: none; }
+    }
+
     @media print {
       html, body { width: auto; height: auto; overflow: visible; }
       body { background: #fff; }
-      .ambient, .world-header, .scene, .today-package, .feature-dock, .paper-bridge, .departure, .privacy, .toast { display: none !important; }
+      .ambient, .world-header, .scene, .today-package, .feature-dock, .paper-bridge, .departure, .privacy, .toast, .feedback-dialog { display: none !important; }
       .world { display: block; width: 540px; height: auto; margin: 0 auto; padding: 0; overflow: visible; }
       .ticket-rail { position: static; width: 540px; height: auto; padding: 0; overflow: visible; transform: none; }
       .receipt-toolbar { display: none; }
