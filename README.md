@@ -1,12 +1,12 @@
-# 票仔：会给你开 AI 打工小票的 Codex 桌宠
+# Codex AI 小票：打工小票 + 情绪小票
 
 <p align="center">
   <strong>中文</strong> · <a href="./README.en.md">English</a>
 </p>
 
 <p align="center">
-  <strong>给 Codex 装一只会开 AI 打工小票的桌宠。</strong><br>
-  票仔会跟随任务状态切换表情，也会把每次 AI 协作整理成一张本地、隐私安全的工作小票。
+  <strong>把每次 Codex 协作，整理成打工小票和情绪小票。</strong><br>
+  一条命令 · 手动或自动 · 完全本地 · 微信聊天文件导入
 </p>
 
 <p align="center">
@@ -17,22 +17,24 @@
 </p>
 
 <p align="center">
-  <a href="docs/codex-pet.md"><img src="docs/images/codex-pet-showcase.png" alt="票仔 AI 小票工的待机、打工、等待确认、完成和失败状态" width="920"></a>
+  <img src="docs/images/readme-hero-zh.png" alt="中文版打工小票和情绪小票首图" width="920">
 </p>
 
 <p align="center">
-  <sub>票仔住在 Codex 原生 Pets 中，会跟随空闲、执行、等待确认、完成和失败状态切换表情。点击图片查看安装与状态说明。</sub>
+  <sub>首图使用当前真实回执页面，展示同一次协作中的打工小票与情绪小票。</sub>
 </p>
 
-## 票仔不只是一只桌宠
+## 两种小票
 
-票仔是为 Codex 原生 Pets 制作的桌宠，负责状态展示和陪伴；它不会读取额外数据、运行 CLI 或改变 Codex 的任务。与 AI 打工小票 Skill 一起安装后，你可以直接让 Codex 帮你开票。
+### 打工小票
 
-小票才是这个项目的核心能力：它统计 Codex 会话中的轮次、工具调用、Token、时长和模型，并提供缓存命中率、每轮效率、P50 / P90 延迟、工作时间热力图、模型与工具结构，生成带有 AI 工分、今日工种和点评的小票。不会把 Prompt、回复正文、代码、项目路径、文件名、工具参数或工具输出写入小票。
+打工小票是可量化的工作记录：它统计会话、轮次、工具调用、Token、时长和模型，并提供缓存命中率、每轮效率、P50 / P90 延迟、工作时间热力图、模型与工具结构，生成带有 AI 工分、今日工种和点评的小票。
 
-<p align="center">
-  <img src="docs/images/readme-hero.jpg" alt="Codex AI 打工小票三种主题效果" width="920">
-</p>
+### 情绪小票
+
+情绪小票用当前记录中的轮次、消息、打断、响应延迟和协作时长等隐私安全指标，表达这次人机协作的状态与感受。它不是读取 Prompt 或回复正文，也不是对对话内容做主观猜测。
+
+两种小票可以只生成一种，也可以同时生成。无论生成哪一种，Prompt、回复正文、代码、项目路径、文件名、工具参数和工具输出都不会写入小票。
 
 cwr2 协议按“会话 × 自然日”生成稳定的脱敏事实。今日、近 7 日和本周小票即使范围重叠，接收端也能识别相同工作。每张小票还会生成一个 `.cwr.json` 微信导入文件；只有完整数据能放进一个二维码时，网页才额外提供扫码导入。
 
@@ -40,55 +42,61 @@ cwr2 协议按“会话 × 自然日”生成稳定的脱敏事实。今日、�
 
 需要 Node.js 20 或更高版本，并且本机已经使用过 Codex。无需克隆仓库。
 
-### 先给 Codex 安装票仔
+### 先设置保存方式和小票内容
 
-一次安装 AI 打工小票 Skill 和“票仔”Codex 桌宠：
+第一次运行会依次选择两个维度：
 
-```bash
-npx codex-work-receipt@latest --install-companion
-```
-
-重启 Codex 后，在 `Settings > Pets` 中点击 Refresh，选择“票仔 · AI 小票工”，再输入 `/pet` 唤醒。以后可以说：
-
-> 票仔，开今天的票。
-
-> 票仔，开最近三个小时的票。
-
-如果只想安装 Skill：
-
-```bash
-npx codex-work-receipt@latest --install-skill
-```
-
-以后可以直接对 Codex 说：
-
-> 给刚刚这次工作开一张 AI 打工小票。
-
-Codex 会选择统计范围和主题、执行命令并打开小票。详见 [Codex Skill 使用文档](docs/codex-skill.md)。
-
-### 直接生成小票
-
-首次交互式运行会先让你选择“自动保存”或“仅手动”，再选择“只输出打工小票 / 只输出情绪小票 / 两种都输出”。推荐自动保存并同时输出两种小票。选择手动后，可以按时间、指定会话或指定项目生成小票：
+1. 保存方式：自动保存或仅手动。
+2. 小票内容：打工小票、情绪小票或两种都输出。
 
 ```bash
 npx codex-work-receipt@latest
 ```
 
-汇总今天的全部 Codex 活动：
+之后想重新选择，可以运行：
 
 ```bash
-npx codex-work-receipt@latest --today
+npx codex-work-receipt@latest --setup
 ```
 
-指定小票类型：
+保存方式和小票内容可以自由组合：
+
+| 维度 | 选项 | 作用 |
+| --- | --- | --- |
+| 保存方式 | 自动保存 | 每轮 Codex 工作结束后，由 `Stop` Hook 静默刷新今天的小票 |
+| 保存方式 | 仅手动 | 不安装自动保存 Hook，按命令或 Skill 需要时生成 |
+| 小票内容 | `work` | 只输出打工小票 |
+| 小票内容 | `emotion` | 只输出情绪小票 |
+| 小票内容 | `both` | 同时输出两种小票（默认） |
+
+也可以直接指定组合：
+
+```bash
+# 自动保存 + 两种小票
+npx codex-work-receipt@latest --enable-auto --receipt-type both
+
+# 仅手动 + 情绪小票
+npx codex-work-receipt@latest --disable-auto --receipt-type emotion
+```
+
+`--disable-auto` 只负责切换为手动模式；如果要立即生成小票，再运行 `--today`、`--hours` 或其他范围命令。
+
+### 直接生成小票
+
+例如，手动生成今天的两种小票：
+
+```bash
+npx codex-work-receipt@latest --today --receipt-type both
+```
+
+只生成某一种：
 
 ```bash
 npx codex-work-receipt@latest --today --receipt-type work
 npx codex-work-receipt@latest --today --receipt-type emotion
-npx codex-work-receipt@latest --today --receipt-type both
 ```
 
-查看最近 3 小时的工作：
+时间范围和小票类型可以继续组合。例如，查看最近 3 小时的工作：
 
 ```bash
 npx codex-work-receipt@latest --hours 3
@@ -140,6 +148,44 @@ npx codex-work-receipt@latest --help all
 ## 从电脑到手机
 
 桌面网页会生成一个脱敏 `.cwr.json` 文件。把它发送到微信文件传输助手后，可在配套小程序中通过“从聊天文件导入”选择；数据足够小时也可以使用唯一的数据二维码快速导入。详见 [手机导入](docs/mobile-import.md)。
+
+## 直接让 Codex 开票
+
+安装 AI 打工小票 Skill 后，可以直接用自然语言让 Codex 选择范围、执行命令并打开小票：
+
+```bash
+npx codex-work-receipt@latest --install-skill
+```
+
+例如：
+
+> 给今天的工作开一张 AI 小票。
+
+> 给刚刚这次工作开一张 AI 小票。
+
+详见 [Codex Skill 使用文档](docs/codex-skill.md)。
+
+## 可选扩展：票仔桌宠
+
+票仔是为 Codex 原生 Pets 制作的可选桌宠，负责状态展示和陪伴；它不会读取额外数据、运行 CLI 或改变 Codex 的任务。使用小票不需要先安装票仔。
+
+<p align="center">
+  <a href="docs/codex-pet.md"><img src="docs/images/codex-pet-showcase.png" alt="票仔 AI 小票工的待机、打工、等待确认、完成和失败状态" width="920"></a>
+</p>
+
+同时安装 Skill 和票仔：
+
+```bash
+npx codex-work-receipt@latest --install-companion
+```
+
+如果已经安装 Skill，也可以只安装桌宠：
+
+```bash
+npx codex-work-receipt@latest --install-pet
+```
+
+重启 Codex 后，在 `Settings > Pets` 中点击 Refresh，选择“票仔 · AI 小票工”，再输入 `/pet` 唤醒。详见 [票仔安装与状态说明](docs/codex-pet.md)。
 
 ## 文档
 
