@@ -2,7 +2,12 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 
 import { buildCode128B } from "../core/barcode.mjs";
+import {
+  buildEmotionReceiptConfig,
+  EMOTION_RECEIPT_STATE_IDS,
+} from "../core/emotion-receipt.mjs";
 import { createReceiptFile } from "../core/file-payload.mjs";
+import { normalizeReceiptType, receiptTypesFor } from "../core/receipt-types.mjs";
 import { formatDate, formatDuration, formatNumber, formatTime } from "../lib/time.mjs";
 import {
   buildCompensation,
@@ -26,14 +31,28 @@ const OFFICE_STYLE_SOURCE = fs.readFileSync(
 const MODELFLARE_LOGO_DATA_URL = `data:image/png;base64,${fs.readFileSync(
   new URL("../../docs/images/sponsors/modelflare-logo.png", import.meta.url),
 ).toString("base64")}`;
-const TICKET_BUDDY_WINDOW_DATA_URL = `data:image/png;base64,${fs.readFileSync(
-  new URL("../../assets/codex-pet/ai-work-receipt/window-pet.png.base64", import.meta.url),
-  "utf8",
-).trim()}`;
+const MODELFLARE_BANNER_ZH_DATA_URL = `data:image/png;base64,${fs.readFileSync(
+  new URL("../../docs/images/sponsors/modelflare-banner-zh.png", import.meta.url),
+).toString("base64")}`;
+const MODELFLARE_BANNER_EN_DATA_URL = `data:image/png;base64,${fs.readFileSync(
+  new URL("../../docs/images/sponsors/modelflare-banner-en.png", import.meta.url),
+).toString("base64")}`;
+const TICKET_BUDDY_WINDOW_DATA_URL = `data:image/gif;base64,${fs.readFileSync(
+  new URL("../../assets/codex-pet/ai-work-receipt/window-pet-jumping.gif", import.meta.url),
+).toString("base64")}`;
 const XIAOHONGSHU_BETA_GROUP_QR_DATA_URL = `data:image/png;base64,${fs.readFileSync(
   new URL("../../assets/xiaohongshu-beta-group-qr.png", import.meta.url),
 ).toString("base64")}`;
-const MODELFLARE_URL = "https://modelflare.dev/sign-up?partner=OB9YXNSEEGOL";
+const MODELFLARE_SPONSOR_BY_LOCALE = {
+  zh: {
+    bannerDataUrl: MODELFLARE_BANNER_ZH_DATA_URL,
+    url: "https://modelflare.dev/sign-up?partner=OB9YXNSEEGOL&utm_source=codex_work_receipt&utm_content=banner_zh_v1",
+  },
+  en: {
+    bannerDataUrl: MODELFLARE_BANNER_EN_DATA_URL,
+    url: "https://modelflare.dev/sign-up?partner=OB9YXNSEEGOL&utm_source=codex_work_receipt&utm_content=banner_en_v1",
+  },
+};
 
 function inlineScript(value) {
   return String(value).replaceAll("</script", "<\\/script");
@@ -237,11 +256,201 @@ function renderFeatureCommands(featureCopy, locale) {
         </div>`;
 }
 
-export function renderHtml({ record, dataQrDataUrl = null, miniProgramCodeDataUrl = null, transferFile = null }) {
+function localDateTimeCommandValue(value, timezone) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(value));
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}T${values.hour}:${values.minute}`;
+}
+
+function receiptRangeCommandArgs(record) {
+  if (record.source.filter_kind === "project") return "--select-project";
+  if (record.source.scope === "session") return "--select-session";
+  if (record.source.scope === "today") return "--today";
+  if (record.source.scope === "last-hours") return `--hours ${record.source.hours || 3}`;
+  if (record.source.scope === "last-7-days") return "--range last-7-days";
+  if (record.source.scope === "this-week") return "--range this-week";
+  if (record.source.scope === "custom-range") {
+    if (record.source.range_kind === "calendar-days") {
+      return `--from ${record.period.range_start_date} --to ${record.period.range_end_date}`;
+    }
+    const from = localDateTimeCommandValue(record.period.start_at, record.period.timezone);
+    const to = localDateTimeCommandValue(record.period.end_at, record.period.timezone);
+    return `--from ${from} --to ${to}`;
+  }
+  return "--latest";
+}
+
+function receiptCommand(record, locale, type) {
+  const languageArgument = locale === "en" ? " --lang en" : "";
+  return `npx codex-work-receipt@latest ${receiptRangeCommandArgs(record)} --receipt-type ${type}${languageArgument}`;
+}
+
+function renderEmptyReportView({ kind, copy, record, locale, hidden }) {
+  const emptyCopy = copy.office.emptyState;
+  const isWork = kind === "work";
+  const title = isWork ? emptyCopy.workTitle : emptyCopy.emotionTitle;
+  const description = isWork ? emptyCopy.workDescription : emptyCopy.emotionDescription;
+  const onlyLabel = isWork ? emptyCopy.workOnlyLabel : emptyCopy.emotionOnlyLabel;
+  const recommendedCommand = receiptCommand(record, locale, "both");
+  const onlyCommand = receiptCommand(record, locale, kind);
+  const commandButton = (label, command, primary = false) => `
+            <div class="report-empty__command${primary ? " report-empty__command--primary" : ""}">
+              <strong>${escapeHtml(label)}</strong>
+              <div>
+                <code tabindex="0">${escapeHtml(command)}</code>
+                <button class="feature-copy-button" type="button" data-copy-command="${escapeHtml(command)}" aria-label="${escapeHtml(`${copy.sidebar.features.copyLabel}: ${label}`)}" title="${escapeHtml(copy.sidebar.features.copyLabel)}">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>
+                  <span data-copy-label>${escapeHtml(copy.sidebar.features.copyLabel)}</span>
+                </button>
+              </div>
+            </div>`;
+  return `
+      <section class="report-view report-view--empty report-view--empty-${kind}" id="report-panel-${kind}" data-report-panel="${kind}" data-report-available="false" aria-label="${escapeHtml(title)}"${hidden ? " hidden" : ""}>
+        <div class="report-empty-stage">
+          <article class="report-empty-card">
+            <div class="report-empty-card__pet"><img src="${TICKET_BUDDY_WINDOW_DATA_URL}" alt="${escapeHtml(copy.office.petAlt)}"></div>
+            <p class="report-empty-card__kicker">${escapeHtml(emptyCopy.kicker)}</p>
+            <h2>${escapeHtml(title)}</h2>
+            <p class="report-empty-card__description">${escapeHtml(description)}</p>
+            <div class="report-empty__commands">
+              ${commandButton(emptyCopy.recommendedLabel, recommendedCommand, true)}
+              ${commandButton(onlyLabel, onlyCommand)}
+            </div>
+            <p class="report-empty-card__hint">${escapeHtml(emptyCopy.commandHint)}</p>
+            <span class="report-empty-card__status" data-command-copy-status role="status" aria-live="polite"></span>
+          </article>
+        </div>
+      </section>`;
+}
+
+function renderEmotionLines(lines) {
+  return lines.map((line) => escapeHtml(line)).join("<br>");
+}
+
+function renderEmotionReceipt(emotionConfig, { hidden = true } = {}) {
+  const shared = emotionConfig.shared;
+  const state = emotionConfig.states[emotionConfig.selectedState];
+  return `
+      <section class="report-view report-view--emotion" id="report-panel-emotion" data-report-panel="emotion" data-report-available="true" data-emotion-state="${escapeHtml(state.id)}" aria-label="${escapeHtml(shared.navLabel)}"${hidden ? " hidden" : ""}>
+        <div class="emotion-view-toolbar" aria-label="${escapeHtml(shared.navLabel)}">
+          <div class="emotion-view-toolbar__identity">
+            <p class="emotion-view-toolbar__eyebrow">${escapeHtml(shared.navLabel)}</p>
+            <p class="emotion-view-toolbar__state"><i aria-hidden="true"></i><span data-emotion-name>${escapeHtml(state.name)}</span></p>
+          </div>
+          <div class="emotion-view-toolbar__actions">
+            <p class="emotion-view-toolbar__note">${escapeHtml(shared.toolbarNote)}</p>
+            <button class="emotion-export-button" id="save-emotion-image" type="button" aria-label="${escapeHtml(shared.exportLabel)}" aria-describedby="emotion-export-status">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+              <span>${escapeHtml(shared.exportLabel)}</span>
+            </button>
+            <span class="emotion-export-status" id="emotion-export-status" role="status" aria-live="polite"></span>
+          </div>
+        </div>
+
+        <div class="emotion-card-stage">
+          <div class="emotion-card-frame">
+            <article class="emotion-ticket" data-emotion-ticket data-emotion-state="${escapeHtml(state.id)}" aria-labelledby="emotion-ticket-title" aria-describedby="emotion-ticket-summary">
+              <p class="sr-only" id="emotion-ticket-summary">${escapeHtml(shared.summary)}</p>
+              <div class="emotion-ticket__atmosphere" aria-hidden="true">
+                <span class="emotion-ticket__glow"></span>
+                <span class="emotion-ticket__wave-one"></span>
+                <span class="emotion-ticket__wave-two"></span>
+              </div>
+              <span class="emotion-ticket__spark emotion-ticket__spark--one" aria-hidden="true"></span>
+              <span class="emotion-ticket__spark emotion-ticket__spark--two" aria-hidden="true"></span>
+
+              <header class="emotion-ticket__brand">
+                <p class="emotion-ticket__brand-name">${escapeHtml(shared.brand)}</p>
+                <p class="emotion-ticket__date">${escapeHtml(shared.relationshipLabel)} · ${escapeHtml(emotionConfig.date)}</p>
+              </header>
+
+              <section class="emotion-ticket__heading">
+                <h2 id="emotion-ticket-title">${escapeHtml(shared.pageTitle)}</h2>
+                <p>${escapeHtml(shared.pageSubtitle)}</p>
+              </section>
+
+              <div class="emotion-ticket__card-shadow" aria-hidden="true"></div>
+              <section class="emotion-ticket__card" data-emotion-card aria-label="${escapeHtml(state.name)}">
+                <span class="emotion-ticket__orb" aria-hidden="true"></span>
+                <p class="emotion-ticket__kicker">EMOTION CARD · <span data-emotion-card-number>${String(EMOTION_RECEIPT_STATE_IDS.indexOf(state.id) + 1).padStart(2, "0")}</span></p>
+                <p class="emotion-ticket__state" data-emotion-state-copy>${escapeHtml(state.state)}</p>
+                <p class="emotion-ticket__statement" data-emotion-statement>${renderEmotionLines(state.statement)}</p>
+                <p class="emotion-ticket__supporting" data-emotion-supporting>${escapeHtml(state.supporting)}</p>
+                <img class="emotion-ticket__mascot" src="${TICKET_BUDDY_WINDOW_DATA_URL}" data-emotion-mascot alt="${escapeHtml(state.mascotAlt)}">
+                <p class="emotion-ticket__signature" data-emotion-mascot-signature>${escapeHtml(state.mascotSignature)}</p>
+              </section>
+
+              <blockquote class="emotion-ticket__os">
+                <p class="emotion-ticket__os-label">${escapeHtml(shared.innerOsLabel)}</p>
+                <p class="emotion-ticket__os-copy" data-emotion-inner-os>${renderEmotionLines(state.innerOs)}</p>
+                <p class="emotion-ticket__os-signature">${escapeHtml(shared.innerOsSignature)}</p>
+              </blockquote>
+
+              <section class="emotion-ticket__metrics" aria-label="${escapeHtml(shared.metricAria)}">
+                ${state.metrics.map((metric, index) => `
+                <div class="emotion-ticket__metric" data-emotion-metric="${index}">
+                  <p class="emotion-ticket__metric-value" data-emotion-metric-value>${escapeHtml(metric.value)}</p>
+                  <p class="emotion-ticket__metric-label" data-emotion-metric-label>${escapeHtml(metric.label)}</p>
+                  <p class="emotion-ticket__metric-note" data-emotion-metric-note>${escapeHtml(metric.note)}</p>
+                </div>`).join("")}
+              </section>
+
+              <footer class="emotion-ticket__footer">
+                <span data-emotion-receipt-number>${escapeHtml(state.receiptNumber)}</span>
+                <span data-emotion-footer-signature>${escapeHtml(state.footerSignature)}</span>
+              </footer>
+            </article>
+          </div>
+        </div>
+      </section>`;
+}
+
+export function renderHtml({
+  record,
+  dataQrDataUrl = null,
+  miniProgramCodeDataUrl = null,
+  transferFile = null,
+  receiptType = "both",
+}) {
   const locale = record.locale || DEFAULT_LOCALE;
   const copy = getReceiptCopy(locale);
+  const selectedReceiptType = normalizeReceiptType(receiptType);
+  const availableReceiptTypes = new Set(receiptTypesFor(selectedReceiptType));
+  const hasWorkReceipt = availableReceiptTypes.has("work");
+  const hasEmotionReceipt = availableReceiptTypes.has("emotion");
+  const initialReportView = selectedReceiptType === "emotion" ? "emotion" : "work";
+  const emotionReceipt = buildEmotionReceiptConfig(record, locale);
+  const emotionReceiptMarkup = hasEmotionReceipt
+    ? renderEmotionReceipt(emotionReceipt, { hidden: initialReportView !== "emotion" })
+    : renderEmptyReportView({
+      kind: "emotion",
+      copy,
+      record,
+      locale,
+      hidden: initialReportView !== "emotion",
+    });
+  const workEmptyMarkup = renderEmptyReportView({
+    kind: "work",
+    copy,
+    record,
+    locale,
+    hidden: initialReportView !== "work",
+  });
+  const emotionConfig = JSON.stringify(emotionReceipt).replaceAll("<", "\\u003c");
+  const reportConfig = JSON.stringify({
+    initialView: initialReportView,
+    receiptType: selectedReceiptType,
+  }).replaceAll("<", "\\u003c");
+  const modelFlareSponsor = locale === "en" ? MODELFLARE_SPONSOR_BY_LOCALE.en : MODELFLARE_SPONSOR_BY_LOCALE.zh;
   const githubStarPrompt = getHtmlStarPrompt(locale);
-  const changelogUrl = `${githubStarPrompt.url}/blob/main/CHANGELOG.md`;
   const githubIssuesUrl = `${githubStarPrompt.url}/issues`;
   const startAt = new Date(record.period.start_at);
   const endAt = new Date(record.period.end_at);
@@ -311,6 +520,7 @@ export function renderHtml({ record, dataQrDataUrl = null, miniProgramCodeDataUr
     copyErrorLabel: copy.sidebar.features.copyErrorLabel,
     copiedStatus: copy.sidebar.features.copiedStatus,
     copyErrorStatus: copy.sidebar.features.copyErrorStatus,
+    emptyCopiedStatus: copy.office.emptyState.copyStatus,
   }).replaceAll("<", "\\u003c");
   const featureCommands = renderFeatureCommands(copy.sidebar.features, locale);
   const featureCommandCount = copy.sidebar.features.groups
@@ -329,7 +539,6 @@ export function renderHtml({ record, dataQrDataUrl = null, miniProgramCodeDataUr
     switchedAutoNight: copy.office.switchedAutoNight,
     switchedDay: copy.office.switchedDay,
     switchedNight: copy.office.switchedNight,
-    workReceiptDescription: copy.office.workReceiptDescription,
   }).replaceAll("<", "\\u003c");
   const insights = renderInsights(record, copy, locale);
   const rows = [
@@ -390,7 +599,7 @@ export function renderHtml({ record, dataQrDataUrl = null, miniProgramCodeDataUr
       </div>`;
 
   return `<!doctype html>
-<html lang="${escapeHtml(copy.htmlLang)}" data-theme="${escapeHtml(record.presentation.default_theme)}" data-scene="${generatedScene}">
+<html lang="${escapeHtml(copy.htmlLang)}" data-theme="${escapeHtml(record.presentation.default_theme)}" data-scene="${generatedScene}" data-receipt-type="${selectedReceiptType}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -1288,7 +1497,8 @@ ${OFFICE_STYLE_SOURCE}
     </div>
 
     <nav class="primary-nav" aria-label="${escapeHtml(copy.office.primaryNavAria)}">
-      <button class="primary-nav__button is-active" type="button" aria-current="page">${escapeHtml(copy.office.todayReceipt)}</button>
+      <button class="primary-nav__button${initialReportView === "work" ? " is-active" : ""}" type="button" data-report-view="work" aria-pressed="${initialReportView === "work"}">${escapeHtml(copy.office.todayReceipt)}</button>
+      <button class="primary-nav__button${initialReportView === "emotion" ? " is-active" : ""}" type="button" data-report-view="emotion" aria-pressed="${initialReportView === "emotion"}">${escapeHtml(copy.office.todayEmotion)}</button>
       <button class="primary-nav__button" type="button" data-planned-message="${escapeHtml(copy.office.ticketHousePlanned)}">${escapeHtml(copy.office.ticketHouse)}<small>${escapeHtml(copy.office.planned)}</small></button>
       <button class="primary-nav__button" type="button" data-planned-message="${escapeHtml(copy.office.badgeWallPlanned)}">${escapeHtml(copy.office.badgeWall)}<small>${escapeHtml(copy.office.planned)}</small></button>
     </nav>
@@ -1340,53 +1550,24 @@ ${OFFICE_STYLE_SOURCE}
         <div class="window">
           <img class="pet" src="${TICKET_BUDDY_WINDOW_DATA_URL}" alt="${escapeHtml(copy.office.petAlt)}">
         </div>
-        <div class="door" aria-hidden="true"></div>
-        <button class="printer" id="printerCommandToggle" type="button" aria-expanded="false" aria-controls="commandDrawer" title="${escapeHtml(copy.office.printerCommandTitle)}"><span>CWR / ${escapeHtml(copy.office.commandDrawerCompact)}</span></button>
 
         <div class="office-info-cluster">
           <div class="notice-lamp" aria-hidden="true"><i></i></div>
           <div class="notice-title">${escapeHtml(copy.office.officeNotice)}</div>
-          <a class="log-board" href="${escapeHtml(changelogUrl)}" target="_blank" rel="noopener noreferrer">
-            <small>${escapeHtml(copy.office.changelogKicker)}</small>
-            ${escapeHtml(copy.office.changelogText)}
-          </a>
           <a class="github-board github-star-link" href="${escapeHtml(githubStarPrompt.url)}" target="_blank" rel="noopener noreferrer">
-            <small>${escapeHtml(copy.office.githubKicker)}</small>
             ${escapeHtml(copy.office.githubText)}
           </a>
-          <a class="sponsor-crate" href="${MODELFLARE_URL}" target="_blank" rel="noopener noreferrer">
-            <img src="${MODELFLARE_LOGO_DATA_URL}" alt="${escapeHtml(copy.sidebar.sponsorAlt)}" width="38" height="38">
-            <span><small>${escapeHtml(copy.office.sponsorKicker)}</small>ModelFlare<strong class="sponsor-offer">${escapeHtml(copy.office.sponsorOffer)}</strong></span>
+          <a class="sponsor-crate sponsor-crate--banner" href="${escapeHtml(modelFlareSponsor.url)}" target="_blank" rel="noopener noreferrer">
+            <img class="sponsor-logo" src="${MODELFLARE_LOGO_DATA_URL}" alt="${escapeHtml(copy.sidebar.sponsorAlt)}" width="38" height="38">
+            <span><small>${escapeHtml(copy.office.sponsorKicker)}</small><img class="sponsor-banner" src="${modelFlareSponsor.bannerDataUrl}" alt="${escapeHtml(copy.office.sponsorBannerAlt)}" width="1843" height="576"></span>
           </a>
         </div>
       </div>
+      <a class="mobile-sponsor-crate sponsor-crate--banner" href="${escapeHtml(modelFlareSponsor.url)}" target="_blank" rel="noopener noreferrer">
+        <img class="sponsor-logo" src="${MODELFLARE_LOGO_DATA_URL}" alt="${escapeHtml(copy.sidebar.sponsorAlt)}" width="38" height="38">
+        <span><small>${escapeHtml(copy.office.sponsorKicker)}</small><img class="sponsor-banner" src="${modelFlareSponsor.bannerDataUrl}" alt="${escapeHtml(copy.office.sponsorBannerAlt)}" width="1843" height="576"></span>
+      </a>
     </section>
-
-    <aside class="today-package" aria-label="${escapeHtml(copy.office.todayPackTitle)}">
-      <div class="today-package__heading">
-        <div><small>${escapeHtml(copy.office.todayPackKicker)}</small><strong>${escapeHtml(copy.office.todayPackTitle)}</strong></div>
-        <span>${escapeHtml(generatedDate)}</span>
-      </div>
-      <button class="package-item is-active" type="button" id="workReceiptShortcut" aria-current="true">
-        <span class="package-item__icon package-item__icon--receipt" aria-hidden="true">${locale === "en" ? "WR" : "票"}</span>
-        <span><strong>${escapeHtml(copy.office.workReceipt)}</strong><small>${escapeHtml(copy.office.workReceiptDescription)}</small></span>
-        <b>${escapeHtml(copy.office.delivered)}</b>
-      </button>
-      <button class="package-item" type="button" data-planned-message="${escapeHtml(copy.office.moodReceiptPlanned)}">
-        <span class="package-item__icon package-item__icon--mood" aria-hidden="true">${locale === "en" ? "MO" : "心"}</span>
-        <span><strong>${escapeHtml(copy.office.moodReceipt)}</strong><small>${escapeHtml(copy.office.moodReceiptDescription)}</small></span>
-        <b>${escapeHtml(copy.office.planned)}</b>
-      </button>
-      <button class="package-item" type="button" data-planned-message="${escapeHtml(copy.office.badgesPlanned)}">
-        <span class="package-item__icon package-item__icon--badge" aria-hidden="true">${locale === "en" ? "BD" : "章"}</span>
-        <span><strong>${escapeHtml(copy.office.currentBadges)}</strong><small>${escapeHtml(copy.office.currentBadgesDescription)}</small></span>
-        <b>${escapeHtml(copy.office.planned)}</b>
-      </button>
-      <div class="today-package__links">
-        <button type="button" data-planned-message="${escapeHtml(copy.office.ticketHousePlanned)}">${escapeHtml(copy.office.enterTicketHouse)}</button>
-        <button type="button" data-planned-message="${escapeHtml(copy.office.badgeWallPlanned)}">${escapeHtml(copy.office.viewBadgeWall)}</button>
-      </div>
-    </aside>
 
     <aside aria-label="${escapeHtml(copy.office.commandDrawerAria)}">
       <details class="feature-dock" id="commandDrawer" data-feature-details>
@@ -1408,7 +1589,9 @@ ${OFFICE_STYLE_SOURCE}
       </details>
     </aside>
 
-    <section class="ticket-rail" aria-label="${escapeHtml(copy.receiptAria)}">
+    <section class="ticket-rail" data-report-view="${initialReportView}" aria-label="${escapeHtml(copy.receiptAria)}">
+      ${hasWorkReceipt ? `
+      <section class="report-view report-view--work" id="report-panel-work" data-report-panel="work" data-report-available="true" aria-label="${escapeHtml(copy.receiptAria)}"${initialReportView !== "work" ? " hidden" : ""}>
       <div class="paper-bridge" aria-hidden="true"></div>
       <div class="receipt-toolbar toolbar">
       <nav class="theme-switcher" aria-label="${escapeHtml(copy.themeAria)}">
@@ -1480,6 +1663,8 @@ ${OFFICE_STYLE_SOURCE}
     </div>
     </div>
     <p class="privacy">${escapeHtml(copy.privacy)}</p>
+      </section>` : workEmptyMarkup}
+      ${emotionReceiptMarkup}
     </section>
   </main>
 
@@ -1532,6 +1717,8 @@ ${OFFICE_STYLE_SOURCE}
     const transferConfig = ${transferConfig};
     const featureConfig = ${featureConfig};
     const officeConfig = ${officeConfig};
+    const emotionConfig = ${emotionConfig};
+    const reportConfig = ${reportConfig};
     const themes = new Set(["classic", "diner", "payroll"]);
     const buttons = [...document.querySelectorAll("[data-theme-value]")];
     function applyTheme(theme) {
@@ -1604,11 +1791,9 @@ ${OFFICE_STYLE_SOURCE}
     const featureDetails = document.querySelector("[data-feature-details]");
     const featureScroll = document.querySelector("[data-feature-scroll]");
     const commandDrawerToggle = document.getElementById("commandDrawerToggle");
-    const printerCommandToggle = document.getElementById("printerCommandToggle");
     function syncCommandDrawerState() {
       const open = Boolean(featureDetails?.open);
       commandDrawerToggle?.setAttribute("aria-expanded", String(open));
-      printerCommandToggle?.setAttribute("aria-expanded", String(open));
     }
     function toggleCommandDrawer(force) {
       if (!featureDetails) return;
@@ -1620,12 +1805,11 @@ ${OFFICE_STYLE_SOURCE}
       featureDetails.addEventListener("toggle", syncCommandDrawerState);
     }
     commandDrawerToggle?.addEventListener("click", () => toggleCommandDrawer());
-    printerCommandToggle?.addEventListener("click", () => toggleCommandDrawer());
     syncCommandDrawerState();
 
     document.addEventListener("pointerdown", (event) => {
       if (!featureDetails?.open) return;
-      if (featureDetails.contains(event.target) || commandDrawerToggle?.contains(event.target) || printerCommandToggle?.contains(event.target)) return;
+      if (featureDetails.contains(event.target) || commandDrawerToggle?.contains(event.target)) return;
       toggleCommandDrawer(false);
     });
     document.addEventListener("keydown", (event) => {
@@ -1638,13 +1822,81 @@ ${OFFICE_STYLE_SOURCE}
     document.querySelectorAll("[data-planned-message]").forEach((button) => {
       button.addEventListener("click", () => showToast(button.dataset.plannedMessage || ""));
     });
-    document.getElementById("workReceiptShortcut")?.addEventListener("click", () => {
+
+    const reportViewButtons = [...document.querySelectorAll(".primary-nav [data-report-view]")];
+    const reportPanels = [...document.querySelectorAll("[data-report-panel]")];
+    const reportViews = new Set(reportViewButtons.map((button) => button.dataset.reportView));
+    function activateReportView(view) {
+      const selected = reportViews.has(view) ? view : "work";
+      reportViewButtons.forEach((button) => {
+        const active = button.dataset.reportView === selected;
+        button.classList.toggle("is-active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+      reportPanels.forEach((panel) => {
+        panel.hidden = panel.dataset.reportPanel !== selected;
+      });
+      if (ticketRail) ticketRail.dataset.reportView = selected;
       ticketRail?.scrollTo({ top: 0, behavior: "smooth" });
-      showToast(officeConfig.workReceiptDescription);
+    }
+    reportViewButtons.forEach((button) => {
+      button.addEventListener("click", () => activateReportView(button.dataset.reportView));
     });
-    document.querySelector(".primary-nav__button.is-active")?.addEventListener("click", () => {
-      ticketRail?.scrollTo({ top: 0, behavior: "smooth" });
-    });
+    activateReportView(reportConfig.initialView);
+
+    const emotionPanel = document.querySelector("[data-report-panel='emotion']");
+    const emotionTicket = document.querySelector("[data-emotion-ticket]");
+    let currentEmotionState = emotionConfig.selectedState;
+    function setEmotionLines(element, lines) {
+      if (!element) return;
+      element.replaceChildren();
+      lines.forEach((line, index) => {
+        if (index) element.appendChild(document.createElement("br"));
+        element.appendChild(document.createTextNode(line));
+      });
+    }
+    function applyEmotionState(requestedState) {
+      const selected = emotionConfig.states[requestedState]
+        ? requestedState
+        : emotionConfig.selectedState;
+      const state = emotionConfig.states[selected];
+      currentEmotionState = selected;
+      if (emotionPanel) emotionPanel.dataset.emotionState = selected;
+      if (emotionTicket) emotionTicket.dataset.emotionState = selected;
+      const name = document.querySelector("[data-emotion-name]");
+      if (name) name.textContent = state.name;
+      const card = document.querySelector("[data-emotion-card]");
+      if (card) card.setAttribute("aria-label", state.name);
+      const number = document.querySelector("[data-emotion-card-number]");
+      const stateIds = Object.keys(emotionConfig.states);
+      if (number) number.textContent = String(stateIds.indexOf(selected) + 1).padStart(2, "0");
+      const stateCopy = document.querySelector("[data-emotion-state-copy]");
+      if (stateCopy) stateCopy.textContent = state.state;
+      setEmotionLines(document.querySelector("[data-emotion-statement]"), state.statement);
+      const supporting = document.querySelector("[data-emotion-supporting]");
+      if (supporting) supporting.textContent = state.supporting;
+      const mascot = document.querySelector("[data-emotion-mascot]");
+      if (mascot) mascot.alt = state.mascotAlt;
+      const mascotSignature = document.querySelector("[data-emotion-mascot-signature]");
+      if (mascotSignature) mascotSignature.textContent = state.mascotSignature;
+      setEmotionLines(document.querySelector("[data-emotion-inner-os]"), state.innerOs);
+      document.querySelectorAll("[data-emotion-metric]").forEach((metricNode, index) => {
+        const metric = state.metrics[index];
+        if (!metric) return;
+        const value = metricNode.querySelector("[data-emotion-metric-value]");
+        const label = metricNode.querySelector("[data-emotion-metric-label]");
+        const note = metricNode.querySelector("[data-emotion-metric-note]");
+        if (value) value.textContent = metric.value;
+        if (label) label.textContent = metric.label;
+        if (note) note.textContent = metric.note;
+      });
+      const receiptNumber = document.querySelector("[data-emotion-receipt-number]");
+      if (receiptNumber) receiptNumber.textContent = state.receiptNumber;
+      const footerSignature = document.querySelector("[data-emotion-footer-signature]");
+      if (footerSignature) footerSignature.textContent = state.footerSignature;
+    }
+    const requestedEmotionState = new URLSearchParams(window.location.search).get("emotion");
+    applyEmotionState(requestedEmotionState || emotionConfig.selectedState);
 
     document.addEventListener("wheel", (event) => {
       if (event.ctrlKey || Math.abs(event.deltaY) < Math.abs(event.deltaX)) return;
@@ -1748,6 +2000,7 @@ ${OFFICE_STYLE_SOURCE}
       let resetTimer = null;
       button.addEventListener("click", async () => {
         const label = button.querySelector("[data-copy-label]");
+        const localCopyStatus = button.closest("[data-report-panel]")?.querySelector("[data-command-copy-status]");
         clearTimeout(resetTimer);
         button.disabled = true;
         try {
@@ -1755,16 +2008,19 @@ ${OFFICE_STYLE_SOURCE}
           button.dataset.state = "success";
           if (label) label.textContent = featureConfig.copiedLabel;
           if (featureCopyStatus) featureCopyStatus.textContent = featureConfig.copiedStatus;
+          if (localCopyStatus) localCopyStatus.textContent = featureConfig.emptyCopiedStatus;
         } catch (error) {
           console.error(error);
           button.dataset.state = "error";
           if (label) label.textContent = featureConfig.copyErrorLabel;
           if (featureCopyStatus) featureCopyStatus.textContent = featureConfig.copyErrorStatus;
+          if (localCopyStatus) localCopyStatus.textContent = featureConfig.copyErrorStatus;
         } finally {
           button.disabled = false;
           resetTimer = setTimeout(() => {
             delete button.dataset.state;
             if (label) label.textContent = featureConfig.copyLabel;
+            if (localCopyStatus) localCopyStatus.textContent = "";
           }, 1800);
         }
       });
@@ -1893,8 +2149,8 @@ ${OFFICE_STYLE_SOURCE}
       link.remove();
     }
 
-    exportButton.addEventListener("click", async () => {
-      if (exportButton.disabled) return;
+    exportButton?.addEventListener("click", async () => {
+      if (exportButton.disabled || !exportNode) return;
       exportButton.disabled = true;
       exportButton.textContent = exportConfig.busyLabel;
       setExportStatus("");
@@ -1939,6 +2195,70 @@ ${OFFICE_STYLE_SOURCE}
         if (renderNode) renderNode.remove();
         exportButton.disabled = false;
         exportButton.textContent = exportConfig.idleLabel;
+      }
+    });
+
+    const emotionExportButton = document.getElementById("save-emotion-image");
+    const emotionExportStatus = document.getElementById("emotion-export-status");
+    const emotionExportNode = document.querySelector("[data-emotion-ticket]");
+
+    function setEmotionExportStatus(message, state = "") {
+      if (!emotionExportStatus) return;
+      emotionExportStatus.textContent = message;
+      emotionExportStatus.dataset.state = state;
+    }
+
+    function createEmotionExportNode(source) {
+      const frame = document.createElement("div");
+      frame.className = "emotion-card-frame emotion-export-frame";
+      const clone = source.cloneNode(true);
+      Object.assign(clone.style, {
+        width: "750px",
+        height: "1000px",
+        maxWidth: "none",
+        margin: "0",
+      });
+      frame.appendChild(clone);
+      document.body.appendChild(frame);
+      return frame;
+    }
+
+    emotionExportButton?.addEventListener("click", async () => {
+      if (emotionExportButton.disabled || !emotionExportNode) return;
+      emotionExportButton.disabled = true;
+      const label = emotionExportButton.querySelector("span");
+      if (label) label.textContent = emotionConfig.shared.exportingLabel;
+      setEmotionExportStatus("");
+      let renderNode = null;
+
+      try {
+        if (document.fonts?.ready) await document.fonts.ready;
+        renderNode = createEmotionExportNode(emotionExportNode);
+        await waitForImages(renderNode);
+        const dataUrl = await domtoimage.toPng(renderNode, {
+          width: 750,
+          height: 1000,
+          scale: 2,
+          pixelRatio: 1,
+          cacheBust: false,
+          onclone(clone) {
+            clone.style.position = "static";
+            clone.style.left = "auto";
+            clone.style.top = "auto";
+            clone.style.width = "750px";
+            clone.style.height = "1000px";
+          },
+          logger: {},
+        });
+        downloadImage(dataUrl, emotionConfig.fileBase + "-" + currentEmotionState + ".png");
+        setEmotionExportStatus(emotionConfig.shared.exportSuccess, "success");
+      } catch (error) {
+        console.error(error);
+        setEmotionExportStatus(emotionConfig.shared.exportError, "error");
+      } finally {
+        if (renderNode) renderNode.remove();
+        emotionExportButton.disabled = false;
+        if (label) label.textContent = emotionConfig.shared.exportLabel;
       }
     });
   </script>

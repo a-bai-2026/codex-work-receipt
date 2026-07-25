@@ -10,6 +10,7 @@ import {
   readAutoState,
   writeAutoState,
 } from "./core/auto-mode.mjs";
+import { receiptTypeFromPreferences } from "./core/receipt-types.mjs";
 import { dateKey } from "./lib/time.mjs";
 
 const LOCK_STALE_MS = 10 * 60 * 1000;
@@ -87,6 +88,7 @@ async function generateOnce({ workReceiptHome, now = new Date() }) {
       timezone: config.preferences?.timezone || "Asia/Shanghai",
       locale: config.preferences?.locale || "zh-CN",
       theme: config.preferences?.theme || "classic",
+      receiptType: receiptTypeFromPreferences(config.preferences),
       output: outputFile,
       dataDir: workReceiptHome,
     }, {
@@ -104,6 +106,7 @@ async function generateOnce({ workReceiptHome, now = new Date() }) {
       import_file: generated.persisted.transferPath,
       receipt_id: generated.record.id,
       snapshot_hash: generated.record.source.snapshot_hash,
+      receipt_type: generated.receiptType,
       error: null,
     };
     writeAutoState({ workReceiptHome }, state);

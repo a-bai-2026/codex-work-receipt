@@ -6,11 +6,17 @@ import path from "node:path";
 
 import { dateKey } from "../lib/time.mjs";
 import { writeJsonAtomicSync } from "../lib/files.mjs";
+import {
+  DEFAULT_RECEIPT_TYPE,
+  normalizeReceiptType,
+  receiptTypeFromPreferences,
+  receiptTypesFor,
+} from "./receipt-types.mjs";
 
 const require = createRequire(import.meta.url);
 
 export const AUTO_HOOK_MARKER = "codex-work-receipt-auto-hook-v1";
-export const AUTO_CONFIG_VERSION = 1;
+export const AUTO_CONFIG_VERSION = 2;
 
 function isObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -234,6 +240,7 @@ export function enableAutomaticMode({
   locale = "zh-CN",
   timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Shanghai",
   theme = "classic",
+  receiptType = DEFAULT_RECEIPT_TYPE,
   nodePath = process.execPath,
 } = {}) {
   if (!projectDir) throw new Error("启用自动保存时缺少项目目录");
@@ -259,7 +266,12 @@ export function enableAutomaticMode({
   const config = {
     config_version: AUTO_CONFIG_VERSION,
     mode: "automatic",
-    preferences: { locale, timezone, theme },
+    preferences: {
+      locale,
+      timezone,
+      theme,
+      receipt_types: receiptTypesFor(normalizeReceiptType(receiptType)),
+    },
     work_receipt_home: workReceiptHome,
     runtime: {
       package_version: runtime.runtimeVersion,
@@ -284,6 +296,7 @@ export function configureManualMode({
   locale = "zh-CN",
   timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Shanghai",
   theme = "classic",
+  receiptType = DEFAULT_RECEIPT_TYPE,
 } = {}) {
   const workReceiptHome = getWorkReceiptHome({ homeDir, dataDir });
   const paths = getAutoPaths({ workReceiptHome });
@@ -299,7 +312,12 @@ export function configureManualMode({
   const config = {
     config_version: AUTO_CONFIG_VERSION,
     mode: "manual",
-    preferences: { locale, timezone, theme },
+    preferences: {
+      locale,
+      timezone,
+      theme,
+      receipt_types: receiptTypesFor(normalizeReceiptType(receiptType)),
+    },
     work_receipt_home: workReceiptHome,
     runtime: previous?.runtime || null,
     hook: null,
@@ -352,6 +370,7 @@ export function getAutomaticStatus({
     config,
     state,
     mode: config?.mode || "unconfigured",
+    receiptType: receiptTypeFromPreferences(config?.preferences),
     hookInstalled: hookIsInstalled(hooksPath),
     runtimeInstalled: Boolean(
       config?.runtime?.runner_entry &&

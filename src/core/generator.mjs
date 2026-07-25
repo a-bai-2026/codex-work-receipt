@@ -6,6 +6,7 @@ import { createReceiptFile } from "./file-payload.mjs";
 import { collectMetrics } from "./metrics.mjs";
 import { getProjectIdentitySecret } from "./project-identity.mjs";
 import { outputSlugForRange, resolveRange } from "./range.mjs";
+import { normalizeReceiptType } from "./receipt-types.mjs";
 import {
   buildReceiptRecord,
   persistReceiptRecord,
@@ -59,6 +60,7 @@ export async function generateReceipt(
     ? {}
     : buildCanonicalFacts(sessions, range, { observedAt });
   const record = buildReceiptRecord(metrics, options.theme, options.locale, canonical);
+  const receiptType = normalizeReceiptType(options.receiptType);
 
   const defaultOutputDir = path.join(process.cwd(), "codex-work-receipt-output");
   const requestedOutput = options.output || path.join(
@@ -94,6 +96,7 @@ export async function generateReceipt(
         ...transferFile,
         filename: path.basename(transferPath),
       },
+      receiptType,
     }),
   );
   const persisted = persistReceiptRecord(record, outputFile, options.dataDir, transferFile);
@@ -106,5 +109,6 @@ export async function generateReceipt(
     dataQrDataUrl,
     dataQrVersion,
     miniProgramCodeDataUrl,
+    receiptType,
   };
 }

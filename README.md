@@ -1,12 +1,12 @@
-# Codex AI 打工小票
+# 票仔：会给你开 AI 打工小票的 Codex 桌宠
 
 <p align="center">
   <strong>中文</strong> · <a href="./README.en.md">English</a>
 </p>
 
 <p align="center">
-  <strong>把本机 Codex 的工作记录，开成一张可以带走的 AI 打工小票。</strong><br>
-  一行命令 · 完全本地 · Codex 桌宠 · 三种主题 · 微信聊天文件导入
+  <strong>给 Codex 装一只会开 AI 打工小票的桌宠。</strong><br>
+  票仔会跟随任务状态切换表情，也会把每次 AI 协作整理成一张本地、隐私安全的工作小票。
 </p>
 
 <p align="center">
@@ -17,78 +17,30 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/readme-hero.jpg" alt="Codex AI 打工小票三种主题效果" width="920">
-</p>
-
-它会统计 Codex 会话中的轮次、工具调用、Token、时长和模型，并提供缓存命中率、每轮效率、P50 / P90 延迟、工作时间热力图、模型与工具结构，生成带有 AI 工分、今日工种和点评的小票。不会把 Prompt、回复正文、代码、项目路径、文件名、工具参数或工具输出写入小票。
-
-cwr2 协议按“会话 × 自然日”生成稳定的脱敏事实。今日、近 7 日和本周小票即使范围重叠，接收端也能识别相同工作。每张小票还会生成一个 `.cwr.json` 微信导入文件；只有完整数据能放进一个二维码时，网页才额外提供扫码导入。
-
-## 认识票仔
-
-<p align="center">
   <a href="docs/codex-pet.md"><img src="docs/images/codex-pet-showcase.png" alt="票仔 AI 小票工的待机、打工、等待确认、完成和失败状态" width="920"></a>
 </p>
 
 <p align="center">
-  <sub>票仔会跟随 Codex 的空闲、执行、等待确认、完成和失败状态切换表情。点击图片查看安装与状态说明。</sub>
+  <sub>票仔住在 Codex 原生 Pets 中，会跟随空闲、执行、等待确认、完成和失败状态切换表情。点击图片查看安装与状态说明。</sub>
 </p>
+
+## 票仔不只是一只桌宠
+
+票仔是为 Codex 原生 Pets 制作的桌宠，负责状态展示和陪伴；它不会读取额外数据、运行 CLI 或改变 Codex 的任务。与 AI 打工小票 Skill 一起安装后，你可以直接让 Codex 帮你开票。
+
+小票才是这个项目的核心能力：它统计 Codex 会话中的轮次、工具调用、Token、时长和模型，并提供缓存命中率、每轮效率、P50 / P90 延迟、工作时间热力图、模型与工具结构，生成带有 AI 工分、今日工种和点评的小票。不会把 Prompt、回复正文、代码、项目路径、文件名、工具参数或工具输出写入小票。
+
+<p align="center">
+  <img src="docs/images/readme-hero.jpg" alt="Codex AI 打工小票三种主题效果" width="920">
+</p>
+
+cwr2 协议按“会话 × 自然日”生成稳定的脱敏事实。今日、近 7 日和本周小票即使范围重叠，接收端也能识别相同工作。每张小票还会生成一个 `.cwr.json` 微信导入文件；只有完整数据能放进一个二维码时，网页才额外提供扫码导入。
 
 ## Quickstart
 
-需要 Node.js 20 或更高版本，并且本机已经使用过 Codex。无需克隆仓库。首次交互式运行会先让你选择“自动保存”或“仅手动”；选择手动后，可以按时间、指定会话或指定项目生成小票：
+需要 Node.js 20 或更高版本，并且本机已经使用过 Codex。无需克隆仓库。
 
-```bash
-npx codex-work-receipt@latest
-```
-
-汇总今天的全部 Codex 活动：
-
-```bash
-npx codex-work-receipt@latest --today
-```
-
-查看最近 3 小时的工作：
-
-```bash
-npx codex-work-receipt@latest --hours 3
-```
-
-“最近 N 小时”是滚动摘要，只用于查看和保存私人历史，不参与 AI 供销社的去重统计。需要进入供销社时，请生成“今日 / 本周 / 近 7 日 / 指定会话 / 自定义完整自然日”小票。
-
-交互选择会话、项目或自定义区间：
-
-```bash
-npx codex-work-receipt@latest --select-session
-npx codex-work-receipt@latest --select-project
-npx codex-work-receipt@latest --custom-range
-```
-
-也可以使用 `--project <目录>`、`--from <开始>` 和 `--to <结束>` 直接指定。完整自然日区间生成 cwr2 规范事实；精确到时分的区间属于私人 cwr1 摘要。
-
-网页、结构数据和微信导入文件默认保存在 `./codex-work-receipt-output/`。生成的网页支持一键下载 `.cwr.json`，也可以保存只包含完整小票和微信小程序码的高清长图。赞助商下方的“更多小票功能”提供 15 条可复制命令，并按“时间范围 / 会话与项目 / 自动模式 / 票仔扩展”分 Tab 展示。数据二维码和网页功能区不会进入图片。详见 [CLI 使用文档](docs/cli.md)。
-
-## 自动保存或仅手动
-
-自动保存使用 Codex 的 `Stop` Hook：每当 Codex 完成一轮工作，就在本机静默刷新当天同一张 HTML、完整 JSON 和 `.cwr.json` 微信导入文件。它不会打开浏览器、不会上传文件，也不会常驻监听进程。自动路径以微信文件导入为主，不生成数据二维码。
-
-重新选择模式：
-
-```bash
-npx codex-work-receipt@latest --setup
-```
-
-也可以直接启用、关闭或检查自动保存：
-
-```bash
-npx codex-work-receipt@latest --enable-auto
-npx codex-work-receipt@latest --disable-auto
-npx codex-work-receipt@latest --auto-status
-```
-
-自动小票统一保存在 `~/.codex-work-receipt/auto/YYYY-MM-DD/`。切换为仅手动只会移除 AI 打工小票自己的 Hook，不会删除历史小票或其他 Codex Hook。安装 Hook 后请重启 Codex；如果 Codex 提示审查新 Hook，请使用 `/hooks` 确认并信任。Codex Hook 机制见 [官方文档](https://learn.chatgpt.com/docs/hooks)。
-
-## 直接跟 Codex 说
+### 先给 Codex 安装票仔
 
 一次安装 AI 打工小票 Skill 和“票仔”Codex 桌宠：
 
@@ -113,6 +65,77 @@ npx codex-work-receipt@latest --install-skill
 > 给刚刚这次工作开一张 AI 打工小票。
 
 Codex 会选择统计范围和主题、执行命令并打开小票。详见 [Codex Skill 使用文档](docs/codex-skill.md)。
+
+### 直接生成小票
+
+首次交互式运行会先让你选择“自动保存”或“仅手动”，再选择“只输出打工小票 / 只输出情绪小票 / 两种都输出”。推荐自动保存并同时输出两种小票。选择手动后，可以按时间、指定会话或指定项目生成小票：
+
+```bash
+npx codex-work-receipt@latest
+```
+
+汇总今天的全部 Codex 活动：
+
+```bash
+npx codex-work-receipt@latest --today
+```
+
+指定小票类型：
+
+```bash
+npx codex-work-receipt@latest --today --receipt-type work
+npx codex-work-receipt@latest --today --receipt-type emotion
+npx codex-work-receipt@latest --today --receipt-type both
+```
+
+查看最近 3 小时的工作：
+
+```bash
+npx codex-work-receipt@latest --hours 3
+```
+
+“最近 N 小时”是滚动摘要，只用于查看和保存私人历史，不参与 AI 供销社的去重统计。需要进入供销社时，请生成“今日 / 本周 / 近 7 日 / 指定会话 / 自定义完整自然日”小票。
+
+交互选择会话、项目或自定义区间：
+
+```bash
+npx codex-work-receipt@latest --select-session
+npx codex-work-receipt@latest --select-project
+npx codex-work-receipt@latest --custom-range
+```
+
+也可以使用 `--project <目录>`、`--from <开始>` 和 `--to <结束>` 直接指定。完整自然日区间生成 cwr2 规范事实；精确到时分的区间属于私人 cwr1 摘要。
+
+网页、结构数据和微信导入文件默认保存在 `./codex-work-receipt-output/`。生成的网页支持一键下载 `.cwr.json`，也可以分别保存打工小票或情绪小票长图。未生成的类型仍保留顶部 Tab，并展示可复制的补齐命令。“更多命令行功能”提供 22 条可复制命令，按小票类型、时间范围、会话与项目、自动模式、票仔扩展和帮助分类展示。详见 [CLI 使用文档](docs/cli.md)。
+
+## 自动保存或仅手动
+
+自动保存使用 Codex 的 `Stop` Hook：每当 Codex 完成一轮工作，就在本机静默刷新当天同一张 HTML、完整 JSON 和 `.cwr.json` 微信导入文件。它不会打开浏览器、不会上传文件，也不会常驻监听进程。自动路径以微信文件导入为主，不生成数据二维码。
+
+重新选择模式：
+
+```bash
+npx codex-work-receipt@latest --setup
+```
+
+也可以直接启用、关闭或检查自动保存：
+
+```bash
+npx codex-work-receipt@latest --enable-auto --receipt-type both
+npx codex-work-receipt@latest --disable-auto
+npx codex-work-receipt@latest --auto-status
+```
+
+命令较多时，可以使用分组帮助：
+
+```bash
+npx codex-work-receipt@latest --help
+npx codex-work-receipt@latest --help receipt
+npx codex-work-receipt@latest --help auto
+npx codex-work-receipt@latest --help all
+```
+
+自动小票统一保存在 `~/.codex-work-receipt/auto/YYYY-MM-DD/`。切换为仅手动只会移除 AI 打工小票自己的 Hook，不会删除历史小票或其他 Codex Hook。安装 Hook 后请重启 Codex；如果 Codex 提示审查新 Hook，请使用 `/hooks` 确认并信任。Codex Hook 机制见 [官方文档](https://learn.chatgpt.com/docs/hooks)。
 
 ## 从电脑到手机
 

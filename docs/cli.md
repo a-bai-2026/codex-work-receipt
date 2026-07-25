@@ -22,7 +22,25 @@ npx codex-work-receipt@latest
 - `自动保存`：Codex 每完成一轮工作，就静默刷新今天的小票和 `.cwr.json` 微信导入文件
 - `仅手动`：只有执行命令或告诉票仔时才生成
 
+然后选择小票内容：
+
+- `两种都输出`（推荐）：同一份 HTML 包含“今日回执”和“今日情绪”
+- `只输出打工小票`
+- `只输出情绪小票`
+
 选择仅手动后，命令行会继续让你选择今天、最近 3 小时、最近 7 个自然日、本周、自定义区间、具体会话或具体项目。选择会话时会展示起止时间、轮次、工具调用和模型；选择项目时会展示本地项目名、最近活动和会话数量。显式使用 `--today`、`--latest` 等范围参数时不会触发模式问答。
+
+## 小票类型
+
+```bash
+npx codex-work-receipt@latest --today --receipt-type work
+npx codex-work-receipt@latest --today --receipt-type emotion
+npx codex-work-receipt@latest --today --receipt-type both
+```
+
+未显式传入时，优先读取 `~/.codex-work-receipt/config.json` 中保存的偏好；没有配置或读取旧配置时默认使用 `both`。命令行中的 `--receipt-type` 只覆盖本次生成，`--setup` 或 `--enable-auto --receipt-type ...` 会保存长期偏好。
+
+HTML 顶部始终保留“今日回执”和“今日情绪”。如果某种类型没有生成，对应 Tab 会显示空态说明、当前统计范围的补齐命令和复制按钮，不会出现无响应或空白页面。只生成情绪小票时，报告默认打开“今日情绪”。
 
 ## 自动保存
 
@@ -35,7 +53,7 @@ npx codex-work-receipt@latest --setup
 直接启用、切换为仅手动或查看状态：
 
 ```bash
-npx codex-work-receipt@latest --enable-auto
+npx codex-work-receipt@latest --enable-auto --receipt-type both
 npx codex-work-receipt@latest --disable-auto
 npx codex-work-receipt@latest --auto-status
 ```
@@ -160,7 +178,7 @@ npx codex-work-receipt@latest --latest --theme diner
 
 - 点击“下载微信导入文件”会下载同一份 `.cwr.json`。把它发送到微信文件传输助手，再在小程序中点击“从聊天文件导入”。
 - 只有完整数据能安全放进一个二维码时，页面才显示“也可以扫码导入”；桌面端不会再生成多分片二维码。
-- 点击“保存完整长图”会下载高清 PNG。图片只包含完整主小票和微信小程序码，不包含导入文件按钮、数据二维码、主题按钮、网页背景或底部说明。
+- 打工小票的“保存完整长图”和情绪小票的“保存长图”会分别下载适合移动端分享的高清 PNG；网页控制栏、背景和其他报告不会进入图片。
 
 指定时区和输出路径：
 
@@ -191,6 +209,7 @@ npx codex-work-receipt@latest --latest --no-open
 | `--select-session` | 交互选择最近的 Codex 会话 |
 | `--project <directory>` | 只统计指定的本地项目目录 |
 | `--select-project` | 交互选择最近项目及统计范围 |
+| `--receipt-type <type>` | `work`、`emotion` 或 `both`；默认 `both` |
 | `--timezone <name>` | 指定 IANA 时区，例如 `Asia/Shanghai` |
 | `--lang <name>` | `zh-CN`（默认）或 `en` |
 | `--theme <name>` | `classic`、`diner` 或 `payroll` |
@@ -205,11 +224,16 @@ npx codex-work-receipt@latest --latest --no-open
 | `--disable-auto` | 移除本工具 Hook，切换为仅手动模式 |
 | `--auto-status` | 查看模式、运行器、Hook 和最近自动生成状态 |
 | `--no-open` | 生成后不自动打开浏览器 |
+| `--help [topic]` | 查看帮助总览或 `receipt`、`range`、`auto`、`companion`、`options`、`all` 分类 |
+| `-h [topic]` | `--help` 的短别名 |
 
 也可以随时运行：
 
 ```bash
 npx codex-work-receipt@latest --help
+npx codex-work-receipt@latest --help receipt
+npx codex-work-receipt@latest --help auto
+npx codex-work-receipt@latest --help all
 ```
 
 ## 本地历史

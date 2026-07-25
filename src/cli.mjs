@@ -16,11 +16,12 @@ import {
   startAutomaticRun,
 } from "./core/auto-mode.mjs";
 import { generateReceipt } from "./core/generator.mjs";
-import { promptForGenerationMode } from "./core/mode-selector.mjs";
+import { promptForGenerationMode, promptForReceiptType } from "./core/mode-selector.mjs";
 import { printOpenSourcePrompt } from "./core/open-source.mjs";
 import { getCustomSummaryNotice, getRollingSummaryNotice, getScopeLabel } from "./core/presentation.mjs";
 import { getProjectIdentitySecret, projectDescriptorFromPath } from "./core/project-identity.mjs";
 import { encodeSingleReceiptQr } from "./core/qr-payload.mjs";
+import { receiptTypeFromPreferences, receiptTypeLabel } from "./core/receipt-types.mjs";
 import {
   promptForCustomRange,
   promptForProjectRange,
@@ -48,14 +49,17 @@ function isInteractive() {
 function printAutomaticEnabled(result, locale) {
   const outputFile = automaticOutputPath(result.config);
   const importFile = outputFile.replace(/\.html?$/i, ".cwr.json");
+  const typeLabel = receiptTypeLabel(receiptTypeFromPreferences(result.config.preferences), locale);
   if (locale === "en") {
     console.log("Automatic saving enabled.");
+    console.log(`Receipt content: ${typeLabel}`);
     console.log("Codex will quietly refresh today's receipt and WeChat import file whenever a turn stops.");
     console.log(`Automatic receipt: ${outputFile}`);
     console.log(`WeChat import file: ${importFile}`);
     console.log("Restart Codex. If Codex asks you to review the new hook, open /hooks and trust AI Work Receipt.");
   } else {
     console.log("自动保存已启用。");
+    console.log(`小票内容：${typeLabel}`);
     console.log("Codex 每完成一轮工作，都会静默刷新今天的小票和微信导入文件。");
     console.log(`自动小票：${outputFile}`);
     console.log(`微信导入文件：${importFile}`);
@@ -64,11 +68,14 @@ function printAutomaticEnabled(result, locale) {
 }
 
 function printManualEnabled(result, locale) {
+  const typeLabel = receiptTypeLabel(receiptTypeFromPreferences(result.config.preferences), locale);
   if (locale === "en") {
     console.log("Manual-only mode enabled. No AI Work Receipt hook will run in the background.");
+    console.log(`Default receipt content: ${typeLabel}`);
     if (result.removedHook?.removed) console.log("The AI Work Receipt hook was removed; existing receipts were kept.");
   } else {
     console.log("已切换为仅手动模式，AI 打工小票不会在后台自动运行。");
+    console.log(`默认小票内容：${typeLabel}`);
     if (result.removedHook?.removed) console.log("已移除 AI 打工小票 Hook，历史小票仍然保留。");
   }
 }
@@ -80,6 +87,7 @@ function enableAuto(options) {
     locale: options.locale,
     timezone: options.timezone,
     theme: options.theme,
+    receiptType: options.receiptType,
   });
   startAutomaticRun(result.config);
   printAutomaticEnabled(result, options.locale);
@@ -93,6 +101,7 @@ function enableManual(options, { showOpenSourcePrompt = true } = {}) {
     locale: options.locale,
     timezone: options.timezone,
     theme: options.theme,
+    receiptType: options.receiptType,
   });
   printManualEnabled(result, options.locale);
   if (showOpenSourcePrompt) printOpenSourcePrompt("receipt", options.locale);
@@ -103,6 +112,7 @@ function printAutoStatus(options) {
   const status = getAutomaticStatus({ dataDir: options.dataDir });
   if (options.locale === "en") {
     console.log(`Mode: ${status.mode}`);
+    console.log(`Receipt content: ${receiptTypeLabel(status.receiptType, options.locale)}`);
     console.log(`Local data: ${status.workReceiptHome}`);
     console.log(`Runtime: ${status.runtimeInstalled ? "installed" : "not installed"}`);
     console.log(`Codex hook: ${status.hookInstalled ? "installed" : "not installed"}`);
@@ -112,6 +122,7 @@ function printAutoStatus(options) {
   } else {
     const modeLabel = status.mode === "automatic" ? "自动保存" : status.mode === "manual" ? "仅手动" : "尚未设置";
     console.log(`模式：${modeLabel}`);
+    console.log(`小票内容：${receiptTypeLabel(status.receiptType, options.locale)}`);
     console.log(`本地数据：${status.workReceiptHome}`);
     console.log(`本地执行器：${status.runtimeInstalled ? "已安装" : "未安装"}`);
     console.log(`Codex Hook：${status.hookInstalled ? "已安装" : "未安装"}`);
@@ -123,14 +134,25 @@ function printAutoStatus(options) {
 
 async function runSetup(options) {
   if (!isInteractive()) throw new Error("--setup 需要在交互式终端中运行；也可以使用 --enable-auto 或 --disable-auto");
-  const selected = await promptForGenerationMode({ locale: options.locale });
-  return selected === "automatic" ? enableAuto(options) : enableManual(options);
+  const selectedMode = await promptForGenerationMode({ locale: options.locale });
+  options.receiptType = options.receiptTypeExplicit
+    ? options.receiptType
+    : await promptForReceiptType({ locale: options.locale });
+  return selectedMode === "automatic" ? enableAuto(options) : enableManual(options);
+}
+
+function applySavedReceiptType(options) {
+  if (options.receiptTypeExplicit) return options.receiptType;
+  const workReceiptHome = getWorkReceiptHome({ dataDir: options.dataDir });
+  const config = readAutoConfig({ workReceiptHome });
+  options.receiptType = receiptTypeFromPreferences(config?.preferences);
+  return options.receiptType;
 }
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
-    printHelp(options.locale);
+    printHelp(options.locale, options.helpTopic);
     return;
   }
   if (options.setup) {
@@ -138,10 +160,12 @@ async function main() {
     return;
   }
   if (options.enableAuto) {
+    applySavedReceiptType(options);
     enableAuto(options);
     return;
   }
   if (options.disableAuto) {
+    applySavedReceiptType(options);
     enableManual(options);
     return;
   }
@@ -190,6 +214,7 @@ async function main() {
     }
     return;
   }
+  applySavedReceiptType(options);
 
   if ((options.selectSession || options.selectProject || (options.mode === "custom-range" && !options.from)) && !isInteractive()) {
     throw new Error("交互选择命令需要在终端中运行；也可以使用 --session、--project、--from 和 --to");
@@ -238,6 +263,9 @@ async function main() {
     const workReceiptHome = getWorkReceiptHome({ dataDir: options.dataDir });
     if (!readAutoConfig({ workReceiptHome })) {
       const selectedMode = await promptForGenerationMode({ locale: options.locale });
+      options.receiptType = options.receiptTypeExplicit
+        ? options.receiptType
+        : await promptForReceiptType({ locale: options.locale });
       if (selectedMode === "automatic") {
         enableAuto(options);
         return;
@@ -285,6 +313,7 @@ async function main() {
 
   if (options.locale === "en") {
     console.log(`Generated HTML: ${outputFile}`);
+    console.log(`Receipt content: ${receiptTypeLabel(generated.receiptType, options.locale)}`);
     console.log(`Structured data: ${persisted.companionPath}`);
     console.log(`WeChat import file: ${persisted.transferPath}`);
     console.log(`Local history: ${persisted.receiptPath}`);
@@ -305,6 +334,7 @@ async function main() {
     if (!miniProgramCodeDataUrl) console.log("Mini-program code: not configured; using the explicit placeholder");
   } else {
     console.log(`已生成网页：${outputFile}`);
+    console.log(`小票内容：${receiptTypeLabel(generated.receiptType, options.locale)}`);
     console.log(`结构数据：${persisted.companionPath}`);
     console.log(`微信导入文件：${persisted.transferPath}`);
     console.log(`本地历史：${persisted.receiptPath}`);

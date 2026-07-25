@@ -73,7 +73,7 @@ test("英文 HTML 会完整本地化 V6 回执所与原版小票内容", () => {
     miniProgramCodeDataUrl: "data:image/png;base64,MINI",
   });
 
-  assert.match(html, /<html lang="en" data-theme="payroll" data-scene="day">/);
+  assert.match(html, /<html lang="en" data-theme="payroll" data-scene="day" data-receipt-type="both">/);
   assert.match(html, /AI Work Receipt/);
   assert.match(html, /Latest session/);
   assert.match(html, /Toolchain Commander/);
@@ -110,20 +110,17 @@ test("英文 HTML 会完整本地化 V6 回执所与原版小票内容", () => {
   assert.match(html, /2026-07-18 · 09:30 · Received by Ticket Buddy/);
   assert.match(html, /Today&#039;s receipt/);
   assert.match(html, /has arrived/);
-  assert.match(html, /Today&#039;s Receipt Pack/);
-  assert.match(html, /Work Receipt/);
-  assert.match(html, /Mood Receipt/);
-  assert.match(html, /Badges/);
+  assert.match(html, /Today&#039;s Mood/);
   assert.match(html, /Ticket House/);
   assert.match(html, /Badge Wall/);
   assert.match(html, /Planned/);
   assert.equal((html.match(/data-scene-mode=/g) || []).length, 3);
   assert.match(html, /data-scene-mode="auto" aria-pressed="true"/);
   assert.match(html, /id="commandDrawerToggle"/);
-  assert.match(html, /id="printerCommandToggle"/);
+  assert.doesNotMatch(html, /printerCommandToggle/);
   assert.match(html, /id="feedbackToggle"/);
   assert.doesNotMatch(html, /id="windToggle"|wind-paused|Pause wind|Resume wind/);
-  assert.match(html, /data:image\/png;base64,[A-Za-z0-9+/=]+" alt="Ticket Buddy on duty/);
+  assert.match(html, /data:image\/gif;base64,[A-Za-z0-9+/=]+" alt="Ticket Buddy on duty/);
 
   assert.match(html, /<dialog class="feedback-dialog" id="feedbackDialog" aria-labelledby="feedbackDialogTitle">/);
   assert.match(html, /Scan to join the Xiaohongshu beta group/);
@@ -137,22 +134,25 @@ test("英文 HTML 会完整本地化 V6 回执所与原版小票内容", () => {
   assert.match(html, /feedbackDialog\?\.addEventListener\("close"/);
 
   assert.match(html, /class="office-info-cluster"/);
-  assert.match(html, /See what changed at the Receipt Office →/);
-  assert.match(html, /Light a star for the Receipt Office on GitHub ★/);
-  assert.equal(html.split(OPEN_SOURCE_REPOSITORY_URL).length - 1, 3);
+  assert.match(html, /Like this tool\? Give it a star on GitHub\./);
+  assert.doesNotMatch(html, /See what changed at the Receipt Office|CHANGELOG\.md|class="log-board"/);
+  assert.equal(html.split(OPEN_SOURCE_REPOSITORY_URL).length - 1, 2);
   assert.match(html, /class="github-board github-star-link"[^>]+target="_blank" rel="noopener noreferrer"/);
-  assert.match(html, new RegExp(OPEN_SOURCE_REPOSITORY_URL + "/blob/main/CHANGELOG\\.md"));
-  assert.match(html, /href="https:\/\/modelflare\.dev\/sign-up\?partner=OB9YXNSEEGOL"/);
-  assert.match(html, /<img src="data:image\/png;base64,[A-Za-z0-9+/=]+" alt="ModelFlare logo"/);
-  assert.match(html, /Unlock 0\.015x GPT exclusive group/);
+  assert.match(html, /href="https:\/\/modelflare\.dev\/sign-up\?partner=OB9YXNSEEGOL&amp;utm_source=codex_work_receipt&amp;utm_content=banner_en_v1"/);
+  assert.match(html, /class="sponsor-logo" src="data:image\/png;base64,[A-Za-z0-9+/=]+" alt="ModelFlare logo"/);
+  assert.match(html, /class="sponsor-banner" src="data:image\/png;base64,[A-Za-z0-9+/=]+" alt="ModelFlare: stable full-capacity models/);
+  assert.match(html, /TOKEN SPONSOR/);
+  assert.match(html, /class="mobile-sponsor-crate sponsor-crate--banner" href="https:\/\/modelflare\.dev\/sign-up\?partner=OB9YXNSEEGOL&amp;utm_source=codex_work_receipt&amp;utm_content=banner_en_v1"/);
   assert.equal((html.match(/target="_blank" rel="noopener noreferrer"/g) || []).length, 4);
 
   assert.match(html, /<details class="feature-dock" id="commandDrawer" data-feature-details>/);
   assert.match(html, /More CLI features/);
-  assert.match(html, /15 commands/);
+  assert.match(html, /22 commands/);
   assert.match(html, /role="tablist" aria-label="Receipt feature categories"/);
-  assert.equal((html.match(/role="tab"/g) || []).length, 4);
-  assert.equal((html.match(/role="tabpanel"/g) || []).length, 4);
+  assert.equal((html.match(/role="tab"/g) || []).length, 6);
+  assert.equal((html.match(/role="tabpanel"/g) || []).length, 6);
+  assert.match(html, /Receipt types/);
+  assert.match(html, /Help and settings/);
   assert.match(html, /Time ranges/);
   assert.match(html, /Sessions and projects/);
   assert.match(html, /Choose a custom range/);
@@ -160,7 +160,7 @@ test("英文 HTML 会完整本地化 V6 回执所与原版小票内容", () => {
   assert.match(html, /--select-project --lang en/);
   assert.match(html, /npx codex-work-receipt@latest --hours 3 --lang en/);
   assert.match(html, /npx codex-work-receipt@latest --install-companion --lang en/);
-  assert.equal((html.match(/data-copy-command=/g) || []).length, 15);
+  assert.equal((html.match(/data-copy-command=/g) || []).length, 22);
   assert.match(html, /codex-work-receipt-feature-tab/);
   assert.match(html, /ArrowRight/);
   assert.match(html, /navigator\.clipboard\?\.writeText/);
@@ -168,12 +168,25 @@ test("英文 HTML 会完整本地化 V6 回执所与原版小票内容", () => {
   assert.doesNotMatch(html, /raw\.githubusercontent\.com/);
 
   assert.match(html, /class="ticket-rail"/);
+  assert.match(html, /data-report-view="work"/);
+  assert.match(html, /data-report-view="emotion"/);
+  assert.match(html, /id="report-panel-work"/);
+  assert.match(html, /id="report-panel-emotion"/);
+  assert.match(html, /Today&#039;s mood card/);
+  assert.match(html, /data-emotion-state="smooth"/);
+  assert.match(html, /TICKET BUDDY · IN SYNC/);
+  assert.match(html, /id="save-emotion-image"/);
+  assert.match(html, /new URLSearchParams\(window\.location\.search\)\.get\("emotion"\)/);
+  assert.match(html, /emotionConfig\.fileBase \+ "-" \+ currentEmotionState/);
   assert.match(html, /class="receipt-toolbar toolbar"/);
   assert.match(html, /\.ticket-rail \{[\s\S]*?position: fixed;[\s\S]*?overflow-y: auto;/);
   assert.match(html, /\.receipt-toolbar \{[\s\S]*?position: sticky;[\s\S]*?top: 0;/);
   assert.match(html, /body \{[\s\S]*?height: 100dvh;[\s\S]*?overscroll-behavior: none;/);
   assert.match(html, /html\[data-scene="day"\] body/);
-  assert.match(html, /html\[data-scene="day"\] \.today-package/);
+  assert.match(html, /html\[data-scene="night"\] \.moon[\s\S]*?mask-image: radial-gradient/);
+  assert.match(html, /aspect-ratio: 1843 \/ 576/);
+  assert.doesNotMatch(html, /class="door"|class="printer"|sponsor-offer/);
+  assert.doesNotMatch(html, /today-package|workReceiptShortcut/);
   assert.match(html, /\.feature-dock:not\(\[open\]\)[\s\S]*?visibility: hidden/);
   assert.match(html, /document\.addEventListener\("wheel"[\s\S]*?ticketRail\.scrollBy/);
   assert.match(html, /applySceneMode\("auto"\)/);
@@ -214,19 +227,19 @@ test("中文 HTML 使用夜班回执所并保留完整功能入口", () => {
   record.generated_at = "2026-07-18T13:30:00.000Z";
   const html = renderHtml({ record, dataQrDataUrl: "data:image/png;base64,DATA" });
 
-  assert.match(html, /<html lang="zh-CN" data-theme="classic" data-scene="night">/);
+  assert.match(html, /<html lang="zh-CN" data-theme="classic" data-scene="night" data-receipt-type="both">/);
   assert.match(html, /世界边缘 · AI 回执所 · 夜班/);
   assert.match(html, /AI 回执所 · 夜班值守中/);
   assert.match(html, /2026\.07\.18 · 21:30 · 票仔签收/);
   assert.match(html, /今日回执/);
+  assert.match(html, /今日情绪/);
   assert.match(html, /已送达/);
-  assert.match(html, /离开前，替回执所点亮一颗星 ★/);
-  assert.match(html, /查看回执所最近发生了什么 →/);
-  assert.match(html, /可解锁 0\.015x GPT 专享分组/);
-  assert.match(html, /今日回执包/);
-  assert.match(html, /打工小票/);
-  assert.match(html, /情绪小票/);
-  assert.match(html, /本次勋章/);
+  assert.match(html, /喜欢这个工具？去 GitHub 点个 ⭐️/);
+  assert.doesNotMatch(html, /查看回执所最近发生了什么|本所物资补给|sponsor-offer/);
+  assert.match(html, /Token 赞助商/);
+  assert.match(html, /href="https:\/\/modelflare\.dev\/sign-up\?partner=OB9YXNSEEGOL&amp;utm_source=codex_work_receipt&amp;utm_content=banner_zh_v1"/);
+  assert.match(html, /class="sponsor-banner" src="data:image\/png;base64,[A-Za-z0-9+/=]+" alt="ModelFlare：稳定满血大模型/);
+  assert.match(html, /data:image\/gif;base64,[A-Za-z0-9+/=]+" alt="票仔在回执所窗口值守/);
   assert.match(html, /小票屋/);
   assert.match(html, /勋章墙/);
   assert.match(html, /规划中/);
@@ -239,16 +252,18 @@ test("中文 HTML 使用夜班回执所并保留完整功能入口", () => {
   assert.match(html, /为了保护隐私，请不要提交 Prompt、代码、密钥或本地文件路径。/);
   assert.doesNotMatch(html, /id="windToggle"|wind-paused|暂停风|让风继续/);
   assert.match(html, /更多命令行功能/);
-  assert.match(html, /15 项/);
+  assert.match(html, /22 项/);
+  assert.match(html, /小票类型/);
+  assert.match(html, /帮助与设置/);
   assert.match(html, /时间范围/);
   assert.match(html, /会话与项目/);
   assert.match(html, /自定义时间区间/);
   assert.match(html, /生成最近 3 小时小票/);
   assert.match(html, /npx codex-work-receipt@latest --hours 3/);
   assert.doesNotMatch(html, /--hours 3 --lang en/);
-  assert.equal((html.match(/data-copy-command=/g) || []).length, 15);
+  assert.equal((html.match(/data-copy-command=/g) || []).length, 22);
   assert.equal((html.match(/data-scene-mode=/g) || []).length, 3);
-  assert.equal(html.split(OPEN_SOURCE_REPOSITORY_URL).length - 1, 3);
+  assert.equal(html.split(OPEN_SOURCE_REPOSITORY_URL).length - 1, 2);
 });
 
 test("没有单码数据时只保留聊天文件导入，不渲染扫码备选", () => {

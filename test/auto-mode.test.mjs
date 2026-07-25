@@ -100,6 +100,7 @@ test("自动模式安装稳定运行器并安全合并 Codex Stop Hook", () => {
   const hooks = JSON.parse(fs.readFileSync(hooksPath, "utf8"));
 
   assert.equal(first.config.mode, "automatic");
+  assert.deepEqual(first.config.preferences.receipt_types, ["work", "emotion"]);
   assert.equal(second.config.mode, "automatic");
   assert.equal(ownHookCount(hooks), 1);
   assert.equal(hooks.description, "existing hooks");
@@ -136,6 +137,7 @@ test("切换为仅手动只移除自己的 Hook 并保留历史与其他 Hook", 
   const updatedHooks = JSON.parse(fs.readFileSync(hooksPath, "utf8"));
 
   assert.equal(result.config.mode, "manual");
+  assert.deepEqual(result.config.preferences.receipt_types, ["work", "emotion"]);
   assert.equal(result.removedHook.removed, true);
   assert.equal(ownHookCount(updatedHooks), 0);
   assert.equal(updatedHooks.hooks.Stop[0].hooks[0].command, "keep-me");
@@ -172,6 +174,42 @@ test("自动运行静默刷新同一天的 HTML、JSON 与微信导入文件", a
   assert.equal(second.receipt_id, first.receipt_id);
   assert.notEqual(second.snapshot_hash, first.snapshot_hash);
   assert.equal(decodeReceiptFile(fs.readFileSync(second.import_file, "utf8")).s[1], 2);
+});
+
+test("自动模式会把情绪小票类型传给生成器并记录最后输出类型", async () => {
+  const current = fixture();
+  const now = new Date("2026-07-22T12:00:00.000Z");
+  writeSession(current.codexHome, now.toISOString(), 3, "emotion-only");
+  enableAutomaticMode({
+    projectDir: PROJECT_DIR,
+    homeDir: current.homeDir,
+    codexHome: current.codexHome,
+    dataDir: current.dataDir,
+    timezone: "Asia/Shanghai",
+    receiptType: "emotion",
+  });
+
+  const result = await runAutomaticReceipt({ workReceiptHome: current.dataDir, now });
+  const html = fs.readFileSync(result.output_file, "utf8");
+
+  assert.equal(result.receipt_type, "emotion");
+  assert.match(html, /data-receipt-type="emotion"/);
+  assert.match(html, /今天还没有生成打工小票/);
+  assert.match(html, /data-emotion-ticket/);
+});
+
+test("旧配置没有 receipt_types 时状态默认解释为两种都输出", () => {
+  const current = fixture();
+  fs.mkdirSync(current.dataDir, { recursive: true });
+  fs.writeFileSync(path.join(current.dataDir, "config.json"), `${JSON.stringify({
+    config_version: 1,
+    mode: "manual",
+    preferences: { locale: "zh-CN", timezone: "Asia/Shanghai", theme: "classic" },
+    work_receipt_home: current.dataDir,
+  }, null, 2)}\n`, "utf8");
+
+  const status = getAutomaticStatus({ homeDir: current.homeDir, dataDir: current.dataDir });
+  assert.equal(status.receiptType, "both");
 });
 
 test("午夜边界的相邻 Stop 触发会分别刷新两个自然日", async () => {

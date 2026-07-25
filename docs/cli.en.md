@@ -22,7 +22,25 @@ The first interactive run asks you to choose:
 - `Automatic saving`: quietly refresh today's receipt and `.cwr.json` WeChat import file whenever a Codex turn stops
 - `Manual only`: generate only when you run the command or ask Ticket Buddy
 
+It then asks which receipt content to include:
+
+- `Both receipts` (recommended): one HTML contains Today's Receipt and Today's Mood
+- `Work receipt only`
+- `Mood receipt only`
+
 After choosing manual-only mode, choose today, the last 3 hours, the last 7 calendar days, this week, a custom range, a recent session, or a recent project. Session choices show their time range, turns, tool calls, and model; project choices show a local project name, latest activity, and session count. Explicit range flags such as `--today` and `--latest` never trigger mode setup.
+
+## Receipt types
+
+```bash
+npx codex-work-receipt@latest --today --receipt-type work --lang en
+npx codex-work-receipt@latest --today --receipt-type emotion --lang en
+npx codex-work-receipt@latest --today --receipt-type both --lang en
+```
+
+Without an explicit value, the CLI uses the saved preference in `~/.codex-work-receipt/config.json`. Missing and legacy configurations default to `both`. A one-off `--receipt-type` overrides only that run; `--setup` or `--enable-auto --receipt-type ...` saves the preference.
+
+The HTML always keeps the Today's Receipt and Today's Mood tabs. A type that was not generated shows an explanatory empty state with current-range regeneration commands and copy buttons. Mood-only reports open Today's Mood by default.
 
 ## Automatic saving
 
@@ -35,7 +53,7 @@ npx codex-work-receipt@latest --setup --lang en
 Enable, switch to manual-only mode, or inspect status directly:
 
 ```bash
-npx codex-work-receipt@latest --enable-auto --lang en
+npx codex-work-receipt@latest --enable-auto --receipt-type both --lang en
 npx codex-work-receipt@latest --disable-auto --lang en
 npx codex-work-receipt@latest --auto-status --lang en
 ```
@@ -160,7 +178,7 @@ In the generated HTML:
 
 - “Download WeChat import file” downloads the same `.cwr.json` file. Send it to WeChat File Transfer, then choose “Import from chat file” in the mini program.
 - “Or import by scanning” appears only when the complete payload safely fits in one data QR code. The desktop no longer generates multipart QR codes.
-- “Save full PNG” downloads a high-resolution image containing only the complete receipt and WeChat mini-program code. File controls, data QR codes, theme controls, the page background, and footer notes are excluded.
+- “Save full PNG” for the work receipt and “Save portrait” for the mood receipt download separate, mobile-friendly images. Page controls, the background, and the other report are excluded.
 
 Set a timezone and output path:
 
@@ -191,6 +209,7 @@ npx codex-work-receipt@latest --latest --lang en --no-open
 | `--select-session` | Interactively choose a recent Codex session |
 | `--project <directory>` | Limit the receipt to one local project directory |
 | `--select-project` | Interactively choose a recent project and range |
+| `--receipt-type <type>` | `work`, `emotion`, or `both`; default: `both` |
 | `--timezone <name>` | Set an IANA timezone such as `Asia/Shanghai` |
 | `--lang <name>` | `zh-CN` (default) or `en` |
 | `--theme <name>` | `classic`, `diner`, or `payroll` |
@@ -205,11 +224,16 @@ npx codex-work-receipt@latest --latest --lang en --no-open
 | `--disable-auto` | Remove this tool's hook and switch to manual-only mode |
 | `--auto-status` | Show the mode, runtime, hook, and latest automatic-run status |
 | `--no-open` | Do not open the generated page |
+| `--help [topic]` | Show the overview or the `receipt`, `range`, `auto`, `companion`, `options`, or `all` topic |
+| `-h [topic]` | Short alias for `--help` |
 
 Run the built-in help at any time:
 
 ```bash
 npx codex-work-receipt@latest --help
+npx codex-work-receipt@latest --help receipt --lang en
+npx codex-work-receipt@latest --help auto --lang en
+npx codex-work-receipt@latest --help all --lang en
 ```
 
 ## Local history
