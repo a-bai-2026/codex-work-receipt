@@ -22,17 +22,20 @@ export function dateKey(date, timezone) {
 }
 
 export function formatDate(date, timezone, locale = "zh-CN") {
-  const formatted = new Intl.DateTimeFormat(locale === "en" ? "en-CA" : "zh-CN", {
+  const selectedLocale = normalizeLocale(locale);
+  const dateLocale = selectedLocale === "en" ? "en-CA" : intlLocale(selectedLocale);
+  const formatted = new Intl.DateTimeFormat(dateLocale, {
     timeZone: timezone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }).format(date);
-  return locale === "en" ? formatted : formatted.replaceAll("/", ".");
+  return selectedLocale === "zh-CN" ? formatted.replaceAll("/", ".") : formatted;
 }
 
 export function formatTime(date, timezone, locale = "zh-CN") {
-  return new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "zh-CN", {
+  const selectedLocale = normalizeLocale(locale);
+  return new Intl.DateTimeFormat(selectedLocale === "en" ? "en-GB" : intlLocale(selectedLocale), {
     timeZone: timezone,
     hour: "2-digit",
     minute: "2-digit",
@@ -49,5 +52,6 @@ export function formatDuration(milliseconds) {
 }
 
 export function formatNumber(value, locale = "zh-CN") {
-  return new Intl.NumberFormat(locale === "en" ? "en-US" : "zh-CN").format(Math.max(0, Math.round(value || 0)));
+  return new Intl.NumberFormat(intlLocale(locale)).format(Math.max(0, Math.round(value || 0)));
 }
+import { intlLocale, normalizeLocale } from "./locale.mjs";

@@ -9,6 +9,7 @@ import {
 import { createReceiptFile } from "../core/file-payload.mjs";
 import { normalizeReceiptType, receiptTypesFor } from "../core/receipt-types.mjs";
 import { formatDate, formatDuration, formatNumber, formatTime } from "../lib/time.mjs";
+import { intlLocale, languageArgument } from "../lib/locale.mjs";
 import {
   buildCompensation,
   DEFAULT_LOCALE,
@@ -94,20 +95,20 @@ function formatDateKey(value, locale) {
 }
 
 function formatDecimal(value, locale, maximumFractionDigits = 1) {
-  return new Intl.NumberFormat(locale === "en" ? "en-US" : "zh-CN", {
+  return new Intl.NumberFormat(intlLocale(locale), {
     maximumFractionDigits,
   }).format(Math.max(0, Number(value || 0)));
 }
 
 function formatPercent(value, locale) {
-  return new Intl.NumberFormat(locale === "en" ? "en-US" : "zh-CN", {
+  return new Intl.NumberFormat(intlLocale(locale), {
     style: "percent",
     maximumFractionDigits: 1,
   }).format(Math.min(1, Math.max(0, Number(value || 0))));
 }
 
 function formatSeconds(milliseconds, locale) {
-  return `${formatDecimal(Number(milliseconds || 0) / 1000, locale)}s`;
+  return `${formatDecimal(Number(milliseconds || 0) / 1000, locale)}${locale === "ja" ? "秒" : "s"}`;
 }
 
 function getHourInTimezone(date, timezone) {
@@ -222,10 +223,10 @@ function renderInsights(record, copy, locale) {
 }
 
 function renderFeatureCommands(featureCopy, locale) {
-  const languageArgument = locale === "en" ? " --lang en" : "";
+  const selectedLanguageArgument = languageArgument(locale);
   const tabs = featureCopy.groups.map((group, groupIndex) => {
     const commands = group.commands.map((item) => {
-      const command = `npx codex-work-receipt@latest ${item.args}${languageArgument}`;
+      const command = `npx codex-work-receipt@latest ${item.args}${selectedLanguageArgument}`;
       return `
           <li class="feature-command">
             <strong class="feature-command__name">${escapeHtml(item.label)}</strong>
@@ -490,7 +491,7 @@ export function renderHtml({
   const shortReceiptId = record.id.replace(/^cwr2?_/, "").slice(0, 8).toUpperCase() || "UNKNOWN";
   const receiptNumber = `${shortReceiptId}-${String(record.stats.completed_turns).padStart(3, "0")}`;
   const compensation = record.presentation.compensation || buildCompensation(record.source.scope, 0, locale);
-  const responseSeconds = new Intl.NumberFormat(locale === "en" ? "en-US" : "zh-CN", {
+  const responseSeconds = new Intl.NumberFormat(intlLocale(locale), {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   }).format(record.stats.average_first_token_ms / 1000);

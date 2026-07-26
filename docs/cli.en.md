@@ -1,6 +1,6 @@
 # CLI guide
 
-<p><a href="./cli.md">中文</a> · <strong>English</strong> · <a href="../README.en.md">Back to README</a></p>
+<p><a href="./cli.md">中文</a> · <strong>English</strong> · <a href="./cli.ja.md">日本語</a> · <a href="../README.en.md">Back to README</a></p>
 
 ## Requirements
 
@@ -211,7 +211,7 @@ npx codex-work-receipt@latest --latest --lang en --no-open
 | `--select-project` | Interactively choose a recent project and range |
 | `--receipt-type <type>` | `work`, `emotion`, or `both`; default: `both` |
 | `--timezone <name>` | Set an IANA timezone such as `Asia/Shanghai` |
-| `--lang <name>` | `zh-CN` (default) or `en` |
+| `--lang <name>` | `zh-CN` (default), `en`, or `ja` |
 | `--theme <name>` | `classic`, `diner`, or `payroll` |
 | `--output <file>` | Set the HTML output path |
 | `--data-dir <directory>` | Set the local structured-history directory |

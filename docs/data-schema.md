@@ -7,7 +7,7 @@
 ## 主要字段
 
 - `schema_version`：结构版本
-- `locale`：桌面小票语言，支持 `zh-CN` 和 `en`
+- `locale`：桌面小票语言，支持 `zh-CN`、`en` 和 `ja`
 - `id`：根据统计快照生成的匿名 ID
 - `generated_at`：生成时间
 - `source`：数据来源、`scope` 统计范围、`range_kind` 区间精度、可选的 `filter_kind` 和采集器版本
@@ -77,6 +77,6 @@ cwr2p.<transferId>.<partIndex>.<partCount>.<totalChecksum>.<partChecksum>.<chunk
 
 同一 Codex 会话出现多份 append-only 日志修订时，生成器只采用更完整的修订；cwr2 manifest 中的 factId 必须唯一，检测到身份冲突时不会输出可扫码二维码。
 
-`presentation.compensation` 是娱乐化 AI 工分，不代表真实 API 费用。为兼容当前中文小程序，二维码展示文案继续使用中文，并通过精简字段 `l` 和 `r` 携带桌面语言及工种语义 ID；英文 HTML 和本地 JSON 不受影响。
+`presentation.compensation` 是娱乐化 AI 工分，不代表真实 API 费用。为兼容当前中文小程序，二维码展示文案继续使用中文，并通过精简字段 `l` 和 `r` 携带桌面语言及工种语义 ID；英文、日文 HTML 和本地 JSON 不受影响。
 
 手机端流程见 [手机文件与单码导入](mobile-import.md)。

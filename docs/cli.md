@@ -1,6 +1,6 @@
 # CLI 使用
 
-<p><strong>中文</strong> · <a href="./cli.en.md">English</a> · <a href="../README.md">返回 README</a></p>
+<p><strong>中文</strong> · <a href="./cli.en.md">English</a> · <a href="./cli.ja.md">日本語</a> · <a href="../README.md">返回 README</a></p>
 
 ## 环境要求
 
@@ -211,7 +211,7 @@ npx codex-work-receipt@latest --latest --no-open
 | `--select-project` | 交互选择最近项目及统计范围 |
 | `--receipt-type <type>` | `work`、`emotion` 或 `both`；默认 `both` |
 | `--timezone <name>` | 指定 IANA 时区，例如 `Asia/Shanghai` |
-| `--lang <name>` | `zh-CN`（默认）或 `en` |
+| `--lang <name>` | `zh-CN`（默认）、`en` 或 `ja` |
 | `--theme <name>` | `classic`、`diner` 或 `payroll` |
 | `--output <file>` | 指定 HTML 输出路径 |
 | `--data-dir <directory>` | 指定本地结构历史目录 |

@@ -7,7 +7,7 @@ The full receipt schema is currently version `2`; rolling-hour and custom exact-
 ## Main fields
 
 - `schema_version`: schema version
-- `locale`: desktop receipt language, `zh-CN` or `en`
+- `locale`: desktop receipt language, `zh-CN`, `en`, or `ja`
 - `id`: anonymous ID derived from the metrics snapshot
 - `generated_at`: generation time
 - `source`: data source, selected `scope`, `range_kind`, optional `filter_kind`, and collector version
@@ -77,6 +77,6 @@ Compact field `o` explicitly carries `latest`, `session`, `last-hours`, `custom-
 
 When the same Codex session has multiple append-only log revisions, the generator keeps the more complete revision. Fact IDs in a cwr2 manifest must be unique; an identity collision stops QR generation instead of emitting an invalid payload.
 
-`presentation.compensation` contains playful AI work points, not real API cost. For compatibility with the current Chinese mini program, QR display copy remains Chinese while compact fields `l` and `r` carry the desktop locale and language-neutral role ID. English HTML and local JSON remain fully localized.
+`presentation.compensation` contains playful AI work points, not real API cost. For compatibility with the current Chinese mini program, QR display copy remains Chinese while compact fields `l` and `r` carry the desktop locale and language-neutral role ID. English and Japanese HTML and local JSON remain fully localized.
 
 See [mobile file and single-QR import](mobile-import.en.md).

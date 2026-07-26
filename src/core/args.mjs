@@ -1,5 +1,6 @@
 import { normalizeScope } from "./range.mjs";
 import { DEFAULT_RECEIPT_TYPE, RECEIPT_TYPE_VALUES } from "./receipt-types.mjs";
+import { SUPPORTED_LOCALES } from "../lib/locale.mjs";
 
 export const HELP_TOPICS = Object.freeze(["receipt", "range", "auto", "companion", "options", "all"]);
 
@@ -268,7 +269,7 @@ export function parseArgs(argv) {
   if (!new Set(["classic", "diner", "payroll"]).has(result.theme)) {
     throw new Error(`不支持的主题：${result.theme}`);
   }
-  if (!new Set(["zh-CN", "en"]).has(result.locale)) {
+  if (!SUPPORTED_LOCALES.has(result.locale)) {
     throw new Error(`不支持的语言：${result.locale}`);
   }
   if (!RECEIPT_TYPE_VALUES.includes(result.receiptType)) {

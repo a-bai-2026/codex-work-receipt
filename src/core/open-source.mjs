@@ -21,27 +21,38 @@ const PROMPTS = {
       message: "If you enjoy Ticket Buddy, a GitHub Star would mean a lot ⭐",
     },
   },
+  ja: {
+    receipt: {
+      label: "オープンソースプロジェクト",
+      message: "AI 作業レシートが役に立ったら、GitHub で Star をいただけるとうれしいです ⭐",
+    },
+    pet: {
+      label: "票仔のソース",
+      message: "票仔を気に入ってくれたら、GitHub で Star をいただけるとうれしいです ⭐",
+    },
+  },
 };
 
 const HTML_STAR_LABELS = {
   "zh-CN": "喜欢这个工具？点个 Star ⭐",
   en: "Enjoying it? Star on GitHub ⭐",
+  ja: "このツールが役に立ったら、GitHub で Star をお願いします ⭐",
 };
 
 export function getOpenSourcePrompt(kind = "receipt", locale = "zh-CN") {
-  const normalizedLocale = locale === "en" ? "en" : "zh-CN";
+  const normalizedLocale = locale === "en" || locale === "ja" ? locale : "zh-CN";
   const localized = PROMPTS[normalizedLocale];
   const copy = localized[kind] || localized.receipt;
   return {
     url: OPEN_SOURCE_REPOSITORY_URL,
     label: copy.label,
     message: copy.message,
-    separator: normalizedLocale === "en" ? ": " : "：",
+    separator: normalizedLocale === "zh-CN" ? "：" : ": ",
   };
 }
 
 export function getHtmlStarPrompt(locale = "zh-CN") {
-  const normalizedLocale = locale === "en" ? "en" : "zh-CN";
+  const normalizedLocale = locale === "en" || locale === "ja" ? locale : "zh-CN";
   return {
     url: OPEN_SOURCE_REPOSITORY_URL,
     label: HTML_STAR_LABELS[normalizedLocale],

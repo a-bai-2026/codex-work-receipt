@@ -1,6 +1,6 @@
 ---
 name: ai-work-receipt
-description: Generate and open a privacy-first local AI work receipt from Codex session metadata. Use when the user asks Codex or 票仔 to create, regenerate, open, or locate an “AI 打工小票”, “工票”, or “AI work receipt” for a session, project, custom range, recent hours, today, the last seven days, or this week, in Chinese or English. Do not use for real invoices, salary calculations, API billing, or non-Codex activity.
+description: Generate and open a privacy-first local AI work receipt from Codex session metadata. Use when the user asks Codex or 票仔 to create, regenerate, open, or locate an “AI 打工小票”, “工票”, “AI work receipt”, or “AI 作業レシート” for a session, project, custom range, recent hours, today, the last seven days, or this week, in Chinese, English, or Japanese. Do not use for real invoices, salary calculations, API billing, or non-Codex activity.
 ---
 
 # AI 打工小票
@@ -27,7 +27,7 @@ Use the published `codex-work-receipt` CLI as the only statistics and rendering 
 - Use `--theme payroll` for “夜班绿票”“绿色小票” or “payroll”.
 - Add `--no-open` only when the user asks not to open the browser.
 - Add `--timezone <IANA name>` only when the user explicitly requests another timezone.
-- Use `--lang en` when the user requests English or asks for the receipt in English. Use `--lang zh-CN` otherwise.
+- Use `--lang ja` when the user requests Japanese or asks for the receipt in Japanese. Use `--lang en` when the user requests English. Use `--lang zh-CN` otherwise.
 - If the user asks to choose a range interactively without specifying session or project selection, run the CLI without a range flag so it can show the complete local selector.
 - If the user asks for an unsupported custom date range, explain the available ranges and do not invent flags.
 - Treat requests addressed to “票仔” the same as direct AI work receipt requests, for example “票仔，开今天的票”.

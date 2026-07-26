@@ -1,6 +1,6 @@
 # Codex Skill
 
-<p><strong>中文</strong> · <a href="./codex-skill.en.md">English</a> · <a href="../README.md">返回 README</a></p>
+<p><strong>中文</strong> · <a href="./codex-skill.en.md">English</a> · <a href="./codex-skill.ja.md">日本語</a> · <a href="../README.md">返回 README</a></p>
 
 AI 打工小票内置了一个 Codex Skill，让 Codex 可以根据自然语言替你选择参数并运行 CLI。
 
@@ -36,7 +36,7 @@ Skill 会安装到：
 
 > 看看本周 Codex 一共打了多少工。
 
-> 用英文生成刚刚这次工作的 AI 打工小票。
+> 用英文或日文生成刚刚这次工作的 AI 打工小票。
 
 Codex 会根据表达选择单次会话、当前或指定项目、自定义日期/时间、最近 1～168 小时、今天、近七日或本周，以及语言和主题，然后执行命令并打开生成的网页。“最近几个小时”默认统计最近 3 小时。
 

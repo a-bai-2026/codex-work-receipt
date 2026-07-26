@@ -1,6 +1,6 @@
 # Codex Skill
 
-<p><a href="./codex-skill.md">中文</a> · <strong>English</strong> · <a href="../README.en.md">Back to README</a></p>
+<p><a href="./codex-skill.md">中文</a> · <strong>English</strong> · <a href="./codex-skill.ja.md">日本語</a> · <a href="../README.en.md">Back to README</a></p>
 
 AI Work Receipt includes a Codex Skill that converts natural-language requests into the appropriate CLI options.
 
@@ -36,7 +36,7 @@ After installation, ask Codex:
 
 > Show how much Codex worked this week.
 
-> Create a Chinese receipt for my latest session.
+> Create a Chinese or Japanese receipt for my latest session.
 
 Codex will choose a specific session, the current or selected project, a custom date/time range, the last 1-168 hours, today, the last seven days, or this week, plus the language and theme, then run the CLI and open the generated page. “The last few hours” defaults to three hours.
 
