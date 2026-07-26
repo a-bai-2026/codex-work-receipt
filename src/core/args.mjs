@@ -1,6 +1,6 @@
 import { normalizeScope } from "./range.mjs";
 import { DEFAULT_RECEIPT_TYPE, RECEIPT_TYPE_VALUES } from "./receipt-types.mjs";
-import { SUPPORTED_LOCALES } from "../lib/locale.mjs";
+import { normalizeLocale, SUPPORTED_LOCALES } from "../lib/locale.mjs";
 
 export const HELP_TOPICS = Object.freeze(["receipt", "range", "auto", "companion", "options", "all"]);
 
@@ -151,8 +151,67 @@ General options:
   },
 };
 
+HELP_SECTIONS.ja = {
+  heading: "Codex AI 作業レシート",
+  overview: `
+使い方:
+  npx codex-work-receipt@latest --lang ja
+  npx codex-work-receipt@latest --today --receipt-type both --lang ja
+
+よく使うコマンド:
+  --setup                     保存モードとレシートの種類を設定
+  --receipt-type <type>       work、emotion、both（既定値は both）
+  --today                     今日のレシートを生成
+  --latest                    直近のレシートを生成
+  --no-open                   生成後にブラウザーを開かない
+
+カテゴリ別ヘルプ:
+  --help receipt              レシートの種類
+  --help range                期間、セッション、プロジェクト
+  --help auto                 自動保存と手動生成
+  --help companion            票仔と Codex Skill
+  --help options              言語、テーマ、出力先
+  --help all                  完全なコマンド一覧`,
+  receipt: `
+レシートの種類:
+  --receipt-type work         作業レシートのみを出力
+  --receipt-type emotion      気分レシートのみを出力
+  --receipt-type both         両方のレシートを出力（既定値、推奨）`,
+  range: `
+対象範囲:
+  --latest                    直近で活動した Codex セッション
+  --today                     今日のすべての Codex 活動
+  --hours <1-168>             直近の指定時間
+  --range last-7-days         直近7日間
+  --range this-week           今週
+  --custom-range              期間を対話形式で選択
+  --select-session            セッションを対話形式で選択
+  --select-project            プロジェクトと期間を対話形式で選択`,
+  auto: `
+自動保存と手動生成:
+  --setup                     保存モードを対話形式で設定
+  --enable-auto               Codex Stop Hook による自動保存を有効化
+  --disable-auto              手動生成のみに切り替え
+  --auto-status               現在の保存モードを確認`,
+  companion: `
+票仔と Codex Skill:
+  --install-companion         票仔と Skill をまとめてインストール
+  --install-pet               票仔のみをインストール
+  --uninstall-pet             票仔をアンインストール
+  --install-skill             Skill のみをインストール`,
+  options: `
+共通オプション:
+  --lang <zh-CN|en|ja>        レシートの言語
+  --timezone <IANA name>      タイムゾーン（例: Asia/Shanghai）
+  --theme <name>              classic、diner、payroll
+  --output <file>             HTML の出力先を指定
+  --data-dir <directory>      ローカル構造データの保存先
+  --no-open                   生成後にブラウザーを開かない
+  --help [topic]              カテゴリ別ヘルプを表示`,
+};
+
 export function printHelp(locale = "zh-CN", topic = null) {
-  const copy = HELP_SECTIONS[locale === "en" ? "en" : "zh-CN"];
+  const copy = HELP_SECTIONS[normalizeLocale(locale)];
   const selected = topic || "overview";
   const sections = selected === "all"
     ? ["overview", "receipt", "range", "auto", "companion", "options"]
