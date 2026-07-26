@@ -38,6 +38,28 @@ Generate either receipt on its own or include both. Neither receipt stores promp
 
 The cwr2 protocol creates stable privacy-safe facts for each session and calendar day, allowing overlapping today, last-seven-days, and this-week receipts to be deduplicated. Every receipt also produces one `.cwr.json` WeChat import file. Scan import appears only when the complete payload fits in one data QR code.
 
+## Sponsor
+
+<table>
+  <thead>
+    <tr>
+      <th width="180">Sponsor</th>
+      <th>About</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center">
+        <a href="https://modelflare.dev/sign-up?partner=OB9YXNSEEGOL&amp;utm_source=codex_work_receipt&amp;utm_content=banner_en_v2"><img src="docs/images/sponsors/modelflare-logo.png" alt="ModelFlare" height="80"></a>
+      </td>
+      <td>
+        <a href="https://modelflare.dev/sign-up?partner=OB9YXNSEEGOL&amp;utm_source=codex_work_receipt&amp;utm_content=banner_en_v2"><strong>ModelFlare | AI Model API Gateway</strong></a><br>
+        Thank you to ModelFlare for sponsoring this project. ModelFlare is a stable, lower-cost AI model API gateway that provides one place to access GPT, Claude, Grok, and other leading models, while tracking requests, token usage, and cost.
+      </td>
+    </tr>
+  </tbody>
+</table>
+
 ## Quickstart
 
 Requires Node.js 20+ and local Codex session records. No clone is required.
@@ -196,14 +218,6 @@ Restart Codex, open `Settings > Pets`, select Refresh, choose “票仔 · AI �
 - [Data schema, file, and QR protocol](docs/data-schema.en.md)
 - [Local data and privacy](docs/privacy.en.md)
 - [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md)
-
-## Sponsor
-
-<p align="center">
-  <a href="https://modelflare.dev/sign-up?partner=OB9YXNSEEGOL"><img src="docs/images/sponsors/modelflare-logo.png" alt="ModelFlare Logo" width="56"></a><br>
-  <a href="https://modelflare.dev/sign-up?partner=OB9YXNSEEGOL"><strong>ModelFlare</strong></a> · <a href="https://modelflare.dev/sign-up?partner=OB9YXNSEEGOL">modelflare.dev</a><br>
-  <sub>Affordable and reliable access to leading AI model APIs, helping independent developers validate ideas faster and turn them into real products.</sub>
-</p>
 
 ## License
 

@@ -38,6 +38,28 @@
 
 cwr2 协议按“会话 × 自然日”生成稳定的脱敏事实。今日、近 7 日和本周小票即使范围重叠，接收端也能识别相同工作。每张小票还会生成一个 `.cwr.json` 微信导入文件；只有完整数据能放进一个二维码时，网页才额外提供扫码导入。
 
+## 赞助商
+
+<table>
+  <thead>
+    <tr>
+      <th width="180">赞助商</th>
+      <th>介绍</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center">
+        <a href="https://modelflare.dev/sign-up?partner=OB9YXNSEEGOL&amp;utm_source=codex_work_receipt&amp;utm_content=banner_cn_v2"><img src="docs/images/sponsors/modelflare-logo.png" alt="ModelFlare" height="80"></a>
+      </td>
+      <td>
+        <a href="https://modelflare.dev/sign-up?partner=OB9YXNSEEGOL&amp;utm_source=codex_work_receipt&amp;utm_content=banner_cn_v2"><strong>ModelFlare｜AI 模型 API 网关</strong></a><br>
+        感谢 Modelflare 赞助本项目。Modelflare 提供价格友好、稳定易接入的 AI 模型 API 网关，可通过统一入口使用 GPT、Claude、Grok 等主流模型，并集中查看请求、Token 用量与成本，适合个人开发者和团队。
+      </td>
+    </tr>
+  </tbody>
+</table>
+
 ## Quickstart
 
 需要 Node.js 20 或更高版本，并且本机已经使用过 Codex。无需克隆仓库。
@@ -196,14 +218,6 @@ npx codex-work-receipt@latest --install-pet
 - [数据结构、文件与二维码协议](docs/data-schema.md)
 - [本地数据与隐私说明](docs/privacy.md)
 - [参与贡献](CONTRIBUTING.md) · [安全说明](SECURITY.md) · [更新日志](CHANGELOG.md)
-
-## 赞助商
-
-<p align="center">
-  <a href="https://modelflare.dev/sign-up?partner=OB9YXNSEEGOL"><img src="docs/images/sponsors/modelflare-logo.png" alt="ModelFlare Logo" width="56"></a><br>
-  <a href="https://modelflare.dev/sign-up?partner=OB9YXNSEEGOL"><strong>ModelFlare</strong></a> · <a href="https://modelflare.dev/sign-up?partner=OB9YXNSEEGOL">modelflare.dev</a><br>
-  <sub>为个人开发者提供价格友好、稳定便捷的前沿 AI 模型 API 接入，帮助你更快完成原型验证，把想法变成真正可用的产品。</sub>
-</p>
 
 ## License
 
