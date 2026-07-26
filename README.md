@@ -219,12 +219,20 @@ npx codex-work-receipt@latest --install-pet
 - [本地数据与隐私说明](docs/privacy.md)
 - [参与贡献](CONTRIBUTING.md) · [安全说明](SECURITY.md) · [更新日志](CHANGELOG.md)
 
+## 支持这个项目
+
+<p align="center">
+  如果这张有趣的小票给你带来一点情绪价值，或确实帮上了忙，欢迎请我喝杯咖啡，或随手赞赏一下，支持这个项目继续维护。
+</p>
+
+<p align="center">
+  <img src="docs/images/support/wechat-appreciation-code.jpg" alt="阿白的微信赞赏码" width="360">
+</p>
+
+<p align="center">
+  <sub>赞赏完全自愿；点一个 Star 也是对项目的支持。</sub>
+</p>
+
 ## License
 
 电脑端源码采用 [GNU GPL v3](LICENSE)（`GPL-3.0-only`）。本项目是非 OpenAI 官方社区工具。
-
----
-
-<p align="center">
-  <strong>如果这张小票让你觉得有点意思，欢迎点一个 Star。</strong>
-</p>

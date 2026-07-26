@@ -219,12 +219,20 @@ Restart Codex, open `Settings > Pets`, select Refresh, choose “票仔 · AI �
 - [Local data and privacy](docs/privacy.en.md)
 - [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md)
 
+## Support the project
+
+<p align="center">
+  If these little receipts brought you a bit of joy or helped you in some way, you are welcome to buy me a coffee or leave a small tip to support continued maintenance.
+</p>
+
+<p align="center">
+  <img src="docs/images/support/wechat-appreciation-code.jpg" alt="A Bai's WeChat appreciation code" width="360">
+</p>
+
+<p align="center">
+  <sub>Tipping is entirely optional; a GitHub Star is also a meaningful way to support the project.</sub>
+</p>
+
 ## License
 
 The desktop source is licensed under [GNU GPL v3](LICENSE) (`GPL-3.0-only`). This is an unofficial community project and is not affiliated with OpenAI.
-
----
-
-<p align="center">
-  <strong>If the receipt made you smile, consider leaving a Star.</strong>
-</p>
