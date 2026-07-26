@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/readme-hero-zh.png" alt="中文版打工小票和情绪小票首图" width="920">
+  <img src="docs/images/hero-zh.jpg" alt="中文版打工小票和情绪小票首图" width="920">
 </p>
 
 <p align="center">
