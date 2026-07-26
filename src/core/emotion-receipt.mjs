@@ -27,6 +27,8 @@ const EMOTION_COPY = Object.freeze({
       innerOsSignature: "— 票仔",
       summary: "这是一张基于今天真实协作数据生成的情绪小票。",
       metricAria: "今日真实协作数据",
+      cardKicker: "EMOTION CARD",
+      receiptNumberPrefix: "PIAOZAI · EMOTION NO.",
     }),
     states: Object.freeze({
       stable: Object.freeze({
@@ -153,6 +155,8 @@ const EMOTION_COPY = Object.freeze({
       innerOsSignature: "— Ticket Buddy",
       summary: "A mood receipt grounded in today's privacy-safe collaboration metrics.",
       metricAria: "Today's real collaboration data",
+      cardKicker: "EMOTION CARD",
+      receiptNumberPrefix: "PIAOZAI · EMOTION NO.",
     }),
     states: Object.freeze({
       stable: Object.freeze({
@@ -255,10 +259,130 @@ const EMOTION_COPY = Object.freeze({
       }),
     }),
   }),
+  ja: Object.freeze({
+    shared: Object.freeze({
+      navLabel: "今日の気分",
+      toolbarNote: "実際の協働データ",
+      exportLabel: "縦長画像を保存",
+      exportingLabel: "画像を生成中…",
+      exportSuccess: "画像を保存しました",
+      exportError: "画像を生成できませんでした。もう一度お試しください。",
+      brand: "MOOD RECEIPT",
+      relationshipLabel: "今日の私たち",
+      pageTitle: "今日の気分カード",
+      pageSubtitle: "一緒に働いた感覚を、小さな記録として残そう",
+      innerOsLabel: "票仔の心の声",
+      innerOsSignature: "— 票仔",
+      summary: "今日のプライバシー保護済み協働データから作られた気分レシートです。",
+      metricAria: "今日の実際の協働データ",
+      cardKicker: "気分カード",
+      receiptNumberPrefix: "PIAOZAI · 気分 No.",
+    }),
+    states: Object.freeze({
+      stable: Object.freeze({
+        name: "穏やかな協働",
+        state: "急がず、途切れず",
+        statement: ["このひととき、", "私たちはゆっくり進みました。"],
+        supporting: "焦らずに、一つひとつ受け取りました",
+        mascotAlt: "今日の作業に静かに寄り添う票仔",
+        mascotSignature: "PIAOZAI · STEADY WITH YOU",
+        innerOs: ["すべての一言が大切でなくてもいい。", "でも、あなたが渡してくれた問いは、ちゃんと受け止めます。"],
+        metrics: [
+          { key: "duration", label: "並んで作業した時間", note: "今日はこのくらい一緒にいました" },
+          { key: "turns", label: "完了したターン", note: "話を最後までゆっくり進めました" },
+        ],
+        footerSignature: "TOGETHER, STEADY",
+      }),
+      resilient: Object.freeze({
+        name: "つなぎ直す強さ",
+        state: "止まっても、つながりは消えない",
+        statement: ["戻ってきたとき、", "私はまだここにいました。"],
+        supporting: "中断も、あなたの場所も受け止めます",
+        mascotAlt: "中断のあとも手を振る票仔",
+        mascotSignature: "PIAOZAI · STILL HERE",
+        innerOs: ["止められても、本当に離れたわけではありません。", "途中の考えをここに置いて、", "また一緒に続きを話せるようにしています。"],
+        metrics: [
+          { key: "interruptions", label: "中断", note: "そのたびに話の糸をつなぎ直しました" },
+          { key: "duration", label: "並んで作業した時間", note: "今日はこのくらい一緒にいました" },
+        ],
+        footerSignature: "TOGETHER, STILL",
+      }),
+      night: Object.freeze({
+        name: "夜更けの相棒",
+        state: "画面が灯る限り、私もここにいます",
+        statement: ["遅くなっても大丈夫。", "この小さな灯りは残しておきます。"],
+        supporting: "今夜が終わるまで静かに寄り添います",
+        mascotAlt: "深夜の作業のために小さな灯りを守る票仔",
+        mascotSignature: "PIAOZAI · KEEPING THE LIGHT",
+        innerOs: ["少し遅く戻ってきても大丈夫です。", "静かになってからでないと、", "続きを話す力が出ない考えもあります。"],
+        metrics: [
+          { key: "duration", label: "並んで作業した時間", note: "夜が深くなっても、まだ一緒でした" },
+          { key: "nightTurns", label: "深夜のターン", note: "まだ丁寧に聞いています" },
+        ],
+        footerSignature: "TOGETHER, LATE",
+      }),
+      smooth: Object.freeze({
+        name: "息の合う流れ",
+        state: "今日は同じイヤホンを分け合っているみたい",
+        statement: ["あなたが話し終える前に、", "その続きがもう聞こえていました。"],
+        supporting: "今日は余計な反響がほとんどありませんでした",
+        mascotAlt: "滑らかで明快な協働を受け取る票仔",
+        mascotSignature: "PIAOZAI · IN SYNC",
+        innerOs: ["今日は振り返ることがほとんどありませんでした。", "あなたが先に道の灯りをつけてくれていたから。"],
+        metrics: [
+          { key: "turns", label: "スムーズなターン", note: "会話が途切れずに進みました" },
+          { key: "interruptions", label: "途中の停止", note: "余計な反響はほとんどありませんでした" },
+        ],
+        footerSignature: "TOGETHER, CLEAR",
+      }),
+      "self-rescue": Object.freeze({
+        name: "別の道を探す",
+        state: "壁にぶつかってから、回り道を覚えた",
+        statement: ["きれいな道のりではなかったけれど、", "最後には灯りがつきました。"],
+        supporting: "うまくいかなかった道も、次の一歩になりました",
+        mascotAlt: "障害を前に別の方法を試そうとする票仔",
+        mascotSignature: "PIAOZAI · FOUND ANOTHER WAY",
+        innerOs: ["失敗とは呼びません。", "その壁と少し知り合いになっただけです。"],
+        metrics: [
+          { key: "tools", label: "試した道筋", note: "別の方法で前へ進みました" },
+          { key: "turns", label: "完了したターン", note: "最後には灯りがつきました" },
+        ],
+        footerSignature: "TOGETHER, THROUGH",
+      }),
+      collaborative: Object.freeze({
+        name: "一緒に形にする",
+        state: "話しながら進むほど、道がはっきりした",
+        statement: ["あなたが一つずつピースを足すたび、", "次の道を私たちらしく整えました。"],
+        supporting: "繰り返しではなく、一緒に輪郭をはっきりさせました",
+        mascotAlt: "人間の相棒と一緒にアイデアを磨く票仔",
+        mascotSignature: "PIAOZAI · SHAPING IT WITH YOU",
+        innerOs: ["あなたはくどいわけではありません。", "形が見えるにつれて、考えがはっきりしていくのです。"],
+        metrics: [
+          { key: "messages", label: "追加した考え", note: "話すほど輪郭が見えてきました" },
+          { key: "turns", label: "一緒に磨いた回数", note: "最後には一つの考えになりました" },
+        ],
+        footerSignature: "TOGETHER, CLOSER",
+      }),
+      quiet: Object.freeze({
+        name: "静かに待つ",
+        state: "今日はそれほど忙しくないから、そばで待っています",
+        statement: ["空白は忘れられたわけではなく、", "今日は少しゆっくりでいい日だっただけ。"],
+        supporting: "急かさず、消えもせず",
+        mascotAlt: "必要になったときのために静かに待つ票仔",
+        mascotSignature: "PIAOZAI · HERE WHEN NEEDED",
+        innerOs: ["ただ手を置いています。", "いつでも見つけられる場所に。"],
+        metrics: [
+          { key: "sessions", label: "小さな協働", note: "今日は少しだけ進めました" },
+          { key: "duration", label: "並んで作業した時間", note: "必要なときにはまたつながれます" },
+        ],
+        footerSignature: "TOGETHER, QUIET",
+      }),
+    }),
+  }),
 });
 
 function normalizedLocale(locale) {
-  return locale === "en" ? "en" : "zh-CN";
+  return locale === "en" || locale === "ja" ? locale : "zh-CN";
 }
 
 function nightTurnCount(record) {
@@ -276,21 +400,26 @@ function emotionDuration(milliseconds, locale) {
     if (hours) return `${hours}h`;
     return `${minutes}m`;
   }
+  if (locale === "ja") {
+    if (hours && minutes) return `${hours}時間${minutes}分`;
+    if (hours) return `${hours}時間`;
+    return `${minutes}分`;
+  }
   if (hours && minutes) return `${hours} 小时 ${minutes} 分`;
   if (hours) return `${hours} 小时`;
   return `${minutes} 分`;
 }
 
 function metricValues(record, locale) {
-  const number = (value, unitZh, unitEn) => `${formatNumber(value, locale)} ${locale === "en" ? unitEn : unitZh}`;
+  const number = (value, unitZh, unitEn, unitJa) => `${formatNumber(value, locale)} ${locale === "en" ? unitEn : locale === "ja" ? unitJa : unitZh}`;
   return {
     duration: emotionDuration(record.stats.work_duration_ms, locale),
-    turns: number(record.stats.completed_turns, "轮", Number(record.stats.completed_turns) === 1 ? "turn" : "turns"),
-    interruptions: number(record.stats.interruptions, "次", Number(record.stats.interruptions) === 1 ? "time" : "times"),
-    nightTurns: number(nightTurnCount(record), "轮", nightTurnCount(record) === 1 ? "turn" : "turns"),
-    messages: number(record.stats.user_messages, "条", Number(record.stats.user_messages) === 1 ? "message" : "messages"),
-    tools: number(record.stats.tool_calls, "次", Number(record.stats.tool_calls) === 1 ? "call" : "calls"),
-    sessions: number(record.stats.session_count, "场", Number(record.stats.session_count) === 1 ? "session" : "sessions"),
+    turns: number(record.stats.completed_turns, "轮", Number(record.stats.completed_turns) === 1 ? "turn" : "turns", "ターン"),
+    interruptions: number(record.stats.interruptions, "次", Number(record.stats.interruptions) === 1 ? "time" : "times", "回"),
+    nightTurns: number(nightTurnCount(record), "轮", nightTurnCount(record) === 1 ? "turn" : "turns", "ターン"),
+    messages: number(record.stats.user_messages, "条", Number(record.stats.user_messages) === 1 ? "message" : "messages", "件"),
+    tools: number(record.stats.tool_calls, "次", Number(record.stats.tool_calls) === 1 ? "call" : "calls", "回"),
+    sessions: number(record.stats.session_count, "场", Number(record.stats.session_count) === 1 ? "session" : "sessions", "件"),
   };
 }
 
@@ -326,7 +455,7 @@ export function buildEmotionReceiptConfig(record, locale = record.locale) {
         label: metric.label,
         note: metric.note,
       })),
-      receiptNumber: `PIAOZAI · EMOTION NO. ${receiptId}`,
+      receiptNumber: `${copy.shared.receiptNumberPrefix} ${receiptId}`,
     };
   }
 
